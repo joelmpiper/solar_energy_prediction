@@ -1,6 +1,6 @@
 """ This file returns specified subsets of all relevant data as dataframes.
 
-    joelmpiper@gmail.com
+    joelmpiper [at] gmail.com
 """
 
 import pandas as pd
@@ -10,7 +10,7 @@ import numpy as np
 import os
 import netCDF4 as nc
 
-def create_training_data(train_dir, station=[], lat=[], lon=[],
+def create_training_data(train_dir, date=[], station=[], lat=[], lon=[],
                          elev=[]):
     """ Returns a dataframes of the y data and the location data.
 
@@ -29,25 +29,28 @@ def create_training_data(train_dir, station=[], lat=[], lon=[],
 
     loc_df['elon'] = loc_df['elon'] + 360
     loc_df.rename(columns={'nlat':'lat','elon':'lon'}, inplace=True)
-    loc_df.index.names = ['station']
+    loc_df.index.names = ['location']
 
     # if we are making any specifications on the output data, then
     # reduce what is returned to conform with those specifications
-    if(station or lat or lon or elev):
-        rot_df, loc_df = reduced_training(rot_df, loc_df, station, lat,
+    if(station or lat or lon or elev or date):
+        rot_df, loc_df = reduced_training(rot_df, loc_df, date, station, lat,
                                          lon, elev)
     return rot_df, loc_df
 
 
-def reduced_training(rot_df, loc_df, station, lat, lon, elev):
+def reduced_training(rot_df, loc_df, date, station, lat, lon, elev):
     """ Returns the y output and location data subsets given the parameters.
 
         Take the output data and location data and return the reduced set.
     """
 
+    # check if there are a reduced list of stations
     if (station):
         mod_train = rot_df[rot_df['location'].isin(station)]
         mod_loc = loc_df.loc[station,:]
+    # if there are a list of stations, then we don't want to choose the
+    # stations by any other parameters (so else not separate ifs)
     else:
         mod_train = rot_df
         mod_loc = loc_df
@@ -60,6 +63,12 @@ def reduced_training(rot_df, loc_df, station, lat, lon, elev):
         if (elev):
             mod_train, mod_loc = cut_var(mod_train, mod_loc, elev, 'elev',
                     rot_df.columns, loc_df.columns)
+    # on the other hand, the date cuts can be paired with any of the other
+    # cuts and only affects output data (not location)
+    if (date):
+        mod_train.sort_index(inplace=True)
+        mod_train = mod_train.loc[date[0]:date[1],:].reset_index().sort_values(
+            ['location','date']).set_index('date')
     return mod_train, mod_loc
 
 
@@ -74,11 +83,14 @@ def cut_var(train, loc, var, var_name, train_split, loc_split):
     mod_train = combined[train_split].drop_duplicates()
     mod_loc = combined[loc_split.union(['location'])]
     mod_loc = mod_loc.reset_index().drop('date', axis=1)
-    mod_loc.rename(columns={'location':'station'}, inplace=True)
-    mod_loc = mod_loc.drop_duplicates().set_index('station')
+    mod_loc = mod_loc.drop_duplicates().set_index('location')
 
     return mod_train, mod_loc
 
+
+def create_input_data(input_dir, date=[]):
+    input_df = []
+    return input_df
 
 def extract_subset(input_dir, output_dir, **kwargs):
     """ Returns the X, y, and location data cut by the parameters specified.
@@ -88,8 +100,12 @@ def extract_subset(input_dir, output_dir, **kwargs):
     """
 
     train_params = {}
+    input_params = {}
     for key, value in kwargs.iteritems():
-        if key in ['station', 'lat', 'lon', 'elev']:
+        if key in ['date', 'station', 'lat', 'lon', 'elev']:
             train_params[key] = value
-    rot_df, loc_df = create_training_data(input_dir, **kwargs)
-    return rot_df, loc_df
+        if key in ['date']:
+            input_params[key] = value
+    input_df = create_input_data(input_dir, **input_params)
+    rot_df, loc_df = create_training_data(output_dir, **train_params)
+    return input_df, rot_df, loc_df
