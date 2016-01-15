@@ -92,7 +92,8 @@ def create_input_data(input_dir, date=[]):
     input_df = []
     return input_df
 
-def extract_subset(input_dir, output_dir, **kwargs):
+
+def subset(input_dir, output_dir, **kwargs):
     """ Returns the X, y, and location data cut by the parameters specified.
 
         Take any list of dates, times, models, latitudes, longitudes,
