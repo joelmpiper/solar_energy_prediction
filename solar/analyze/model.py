@@ -12,7 +12,7 @@ import cPickle as pickle
 import sys
 import os
 sys.path.append(os.getcwd())
-from solar.wrangle.wrangle import InputArray
+from solar.wrangle.wrangle import SolarData
 from sklearn.linear_model import Ridge
 from sklearn.cross_validation import train_test_split
 from sklearn import metrics
@@ -53,12 +53,12 @@ class Model(object):
 
 
         if (self.input_pickle):
-            trainX, trainY, times, testX = pickle.load(open(
+            trainX, trainY, testX = pickle.load(open(
                 self.input_pickle,'rb'))
         elif (self.input_data):
-            trainX, trainY, times, testX = self.input_data
+            trainX, trainY, testX = self.input_data
         else:
-            trainX, trainY, times, testX = InputArray().data
+            trainX, trainY, testX = SolarData().data
         # Gotta pick a scikit-learn model
         model = self.model(normalize=True)
         # Normalizing is usually a good idea

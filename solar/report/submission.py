@@ -13,7 +13,7 @@ import sys
 import os
 import csv
 sys.path.append(os.getcwd())
-from solar.wrangle.wrangle import InputArray
+from solar.wrangle.wrangle import SolarData
 from solar.analyze.model import Model
 from sklearn.linear_model import Ridge
 from sklearn.cross_validation import train_test_split
@@ -62,7 +62,7 @@ class Submission(object):
             __, __, __, testX = self.input_data.data
         else:
             model = Model().model
-            __, __, __, testX = InputArray().data
+            __, __, __, testX = SolarData().data
 
         print 'Predicting...'
 

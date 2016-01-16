@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" This includes the beat-the-benchmark files that are associated with
+""" This file inlcudes the SolarData class. Although it is a class, I am
+currently not really using the object-oriented functionality and instead
+am just using the class as a namespace for static functions. There is still
+a lot of work to do to get this functioning appropriately.
+
+
+This includes the beat-the-benchmark files that are associated with
 the initial data wrangling. See the URL to the forum post with the code:
 https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/forums/t/5282/beating-the-benchmark-in-python-2230k-mae
 by Alec Radford.
@@ -15,8 +21,10 @@ import sys
 import netCDF4 as nc
 import numpy as np
 import cPickle as pickle
+import pandas as pd
 sys.path.append(os.getcwd())
 from solar.wrangle.subset import Subset
+import itertools
 
 class SolarData(object):
     """ Load the solar data from the gefs and mesonet files """
@@ -39,6 +47,7 @@ class SolarData(object):
             else:
                 self.data = self.load(
                     trainX_dir, trainy_file, testX_dir, loc_file, **kwargs)
+
 
     def load_benchmark(self, gefs_train, gefs_test, meso_dir, files_to_use):
         """ Returns numpy arrays, of the training data """
@@ -97,18 +106,93 @@ class SolarData(object):
 
     @staticmethod
     def load_data_explore(trainX_dir, trainy_file, testX_dir, loc_file,
-                          **kwargs):
-        __, train_y, __, loc= Subset.subset(trainX_dir, trainy_file, testX_dir,
-                                            loc_file, **kwargs)
+                          X_par, y_par):
+        train_X, train_y, test_X, loc = Subset.subset(
+            trainX_dir, trainy_file, testX_dir, loc_file, X_par, y_par)
 
-        return train_y, loc
+        # Reshape into one column for exploration
+        train_X = train_X.reshape(np.product(train_X.shape[:]))
+        test_X = test_X.reshape(np.product(test_X.shape[:]))
+        train_index, test_index = SolarData.create_index(**X_par)
+        trainX_df = pd.merge(train_index, pd.DataFrame(train_X),
+                             left_index=True, right_index=True)
+        testX_df = pd.merge(test_index, pd.DataFrame(test_X),
+                            left_index=True, right_index=True)
+
+        # Reorder so that these can be used like variables
+        trainX_df = trainX_df.set_index(['variable', 'date', 'model',
+                             'time', 'lat', 'lon']).unstack('variable')[0]
+        testX_df = testX_df.set_index(['variable', 'date', 'model',
+                            'time', 'lat', 'lon']).unstack('variable')[0]
+        # although these can be thought of as indices, they are easier to
+        # manipulate as regular columns
+        trainX_df.reset_index(inplace=True)
+        testX_df.reset_index(inplace=True)
+        #train_X = train_X.reshape(
+            #np.product(train_X.shape[0:-1]), train_X.shape[-1])
+        #test_X = test_X.reshape(
+            #np.product(test_X.shape[0:-1]), test_X.shape[-1])
+        return trainX_df, train_y, testX_df, loc
 
 
     @staticmethod
-    def load_data_learn(trainX_dir, trainy_file, testX_dir, loc_file, **kwargs):
-        train_X, train_y, test_X, __ = Subset.subset(
-            trainX_dir, trainy_file, testX_dir, loc_file, **kwargs)
+    def create_index(train_dates=[], test_dates=[], var=[], models=[],
+                     times=[], lats=[], longs=[]):
+        if (train_dates):
+            tr_date_index = np.arange(
+                train_dates[0], np.datetime64(train_dates[1])+1,
+                dtype='datetime64')
+        else:
+            tr_date_index = np.arange(np.datetime64('1994-01-01'),
+                                      np.datetime64('2008-01-01'),
+                                      dtype='datetime64')
+        if (test_dates):
+            ts_date_index = np.arange(
+                test_dates[0], np.datetime64(test_dates[1])+1,
+                dtype='datetime64')
+        else:
+            ts_date_index = np.arange(np.datetime64('2008-01-01'),
+                                      np.datetime64('2010-01-01'),
+                                      dtype='datetime64')
+        if ((not var) or var[0] == 'all'):
+            var = [
+                'dswrf_sfc','dlwrf_sfc','uswrf_sfc','ulwrf_sfc',
+                'ulwrf_tatm','pwat_eatm','tcdc_eatm','apcp_sfc','pres_msl',
+                'spfh_2m','tcolc_eatm','tmax_2m','tmin_2m','tmp_2m','tmp_sfc'
+            ]
+        if (not models):
+            models = np.arange(0,11)
+        if (not lats):
+            lats = np.arange(31,40)
+        if (not longs):
+            longs = np.arange(254,270)
+        if (not times):
+            times = np.arange(12,25,3)
+        col_names = ['variable', 'date', 'model', 'time', 'lat', 'lon']
+        new_tr_indices = pd.DataFrame(list(itertools.product(
+            var, tr_date_index, models, times, lats,longs)))
+        new_tr_indices.columns = col_names
+        new_ts_indices = pd.DataFrame(list(itertools.product(
+            var, ts_date_index, models, times, lats,longs)))
+        new_ts_indices.columns = col_names
+        return new_tr_indices, new_ts_indices
 
+
+    @staticmethod
+    def load_data_learn(trainX_dir, trainy_file, testX_dir, loc_file,
+                        X_par, y_par):
+        train_X, train_y, test_X, __ = SolarData.load_data_explore(
+            trainX_dir, trainy_file, testX_dir, loc_file, X_par, y_par)
+
+        # For learning purposes, we need each row to correspond to a day
+        train_X = train_X.reset_index().set_index(
+            ['date', 'model', 'time', 'lat', 'lon']).unstack(
+                ['model', 'time', 'lat', 'lon'])
+        test_X = test_X.reset_index().set_index(
+            ['date', 'model', 'time', 'lat', 'lon']).unstack(
+                ['model', 'time', 'lat', 'lon'])
+        train_X.drop('index', axis=1, inplace=True)
+        test_X.drop('index', axis=1, inplace=True)
         train_y.reset_index(inplace=True)
         train_y = train_y.pivot(index='date', columns='location',
                                 values='total_solar')
@@ -119,19 +203,46 @@ class SolarData(object):
     def load(trainX_dir, trainy_file, testX_dir, loc_file, **kwargs):
         """ Returns numpy arrays, of the training data """
 
-        trainX = load_GEFS_data(gefs_train,files_to_use,train_sub_str)
-        trainX, testX, trainy = SolarData.load_data_learn(
-            trainX_dir, trainy_file, testX_dir, loc_file, **kwargs)
+        X_params, y_params = SolarData.parse_parameters(**kwargs)
+        #print(X_params)
+        #print(y_params)
+        trainX, trainy, testX = SolarData.load_data_learn(
+            trainX_dir, trainy_file, testX_dir, loc_file, X_params,
+            y_params)
+
         print 'Training data shape',trainX.shape,trainy.shape
 
         pickle.dump((trainX, trainy, testX),
                     open("solar/data/kaggle_solar/all_input.p","wb"))
         return trainX, trainy, testX
 
+
+    @staticmethod
+    def parse_parameters(**kwargs):
+        X_params = {}
+        y_params = {}
+        for key, value in kwargs.iteritems():
+            if key in ['train_dates', 'station', 'lats', 'longs', 'elevs']:
+                y_params[key] = value
+            if key in ['train_dates', 'test_dates', 'var', 'models', 'lats',
+                        'longs', 'elevs', 'times']:
+                X_params[key] = value
+
+        return X_params, y_params
+
+
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):
         return pickle.load(open(pickle_dir + '/all_input.p','rb'))
 
 
 if __name__ == '__main__':
-    solar_array = SolarData(pickle=False)
-    print solar_array.data[0].shape
+    train_dates = ['2005-07-29', '2005-08-02']
+    test_dates = ['2008-12-29', '2009-01-05']
+    var = ['dswrf_sfc', 'uswrf_sfc', 'spfh_2m', 'ulwrf_tatm']
+    models = [0, 10]
+    lats = range(34,37)
+    longs = range(260,264)
+    solar_array = SolarData(pickle=False, benchmark=False, var=var,
+                            models = models, lats=lats, longs=longs,
+                            train_dates=train_dates, test_dates=test_dates)
+    print solar_array.data

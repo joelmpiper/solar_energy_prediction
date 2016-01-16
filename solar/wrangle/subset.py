@@ -26,23 +26,15 @@ class Subset(object):
 
 
     @staticmethod
-    def subset(trainX_dir, trainy_file, testX_dir, loc_file, **kwargs):
+    def subset(trainX_dir, trainy_file, testX_dir, loc_file, X_par, y_par):
         """ Returns the X, y, and location data cut by the parameters specified.
 
-            Take any list of dates, times, models, latitudes, longitudes,
-            and predictive locations, as well as elevation ranges.
+        Take any list of dates, times, models, latitudes, longitudes,
+        and predictive locations, as well as elevation ranges.
         """
 
-        X_params = {}
-        y_params = {}
-        for key, value in kwargs.iteritems():
-            if key in ['train_dates', 'station', 'lats', 'longs', 'elevs']:
-                y_params[key] = value
-            if key in ['train_dates', 'test_dates', 'var', 'models', 'lats',
-                       'longs', 'elevs']:
-                X_params[key] = value
-        trainX, testX = Subset.create_Xdata(trainX_dir, testX_dir, **X_params)
-        trainy, loc = Subset.create_ydata(trainy_file, loc_file, **y_params)
+        trainX, testX = Subset.create_Xdata(trainX_dir, testX_dir, **X_par)
+        trainy, loc = Subset.create_ydata(trainy_file, loc_file, **y_par)
         return trainX, trainy, testX, loc
 
 
@@ -67,12 +59,18 @@ class Subset(object):
         loc_df.rename(columns={'nlat':'lat','elon':'lon'}, inplace=True)
         loc_df.index.names = ['location']
 
+        lat_specs = []
+        long_specs = []
+        if (lats):
+            lat_specs = [min(lats), max(lats)]
+        if (longs):
+            longs = [min(longs), max(longs)]
         # if we are making any specifications on the output data, then
         # reduce what is returned to conform with those specifications
         if(station or lats or longs or elevs or train_dates):
             rot_df, loc_df = Subset.reduced_training(
-                rot_df, loc_df, train_dates, station, [min(lats), max(lats)],
-                [min(longs), max(longs)], elevs)
+                rot_df, loc_df, train_dates, station, lat_specs,
+                long_specs, elevs)
         return rot_df, loc_df
 
 
@@ -93,21 +91,11 @@ class Subset(object):
             mod_train = rot_df
             mod_loc = loc_df
             if (lat):
-                if (TEST > 200):
-                    print "Mod Train Lat"
-                    print(mod_train)
-                    print "Mod Loc Lat"
-                    print(mod_loc)
-                mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lat,
+               mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lat,
                                                     'lat', rot_df.columns,
                                                     loc_df.columns)
             if (lon):
-                if (TEST > 0):
-                    print "Mod Train Lon"
-                    print(mod_train)
-                    print "Mod Loc Lon"
-                    print(mod_loc)
-                mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lon,
+               mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lon,
                                                     'lon', rot_df.columns,
                                                     loc_df.columns)
             if (elev):
@@ -128,33 +116,18 @@ class Subset(object):
     def cut_var(train, loc, var, var_name, train_split, loc_split):
         """ Take output dataframes and reduce the single variable. """
 
-        if (TEST > 0):
-            print("Train in cut_var:")
-            print(train)
         combined = train.merge(loc, left_on='location',
                                     right_index=True)
 
-        if (TEST > 0):
-            print("Combined after first merge:")
-            print(combined)
         combined = combined[(combined[var_name] >= var[0]) &
                             (combined[var_name] <= var[1])]
-        if (TEST > 0):
-            print("Combined after first cut:")
-            print(combined)
+
         mod_train = combined[train_split].drop_duplicates()
-        if (TEST > 0):
-            print("Mod Train after resplitting:")
-            print(mod_train)
+
         mod_loc = combined[loc_split.union(['location'])]
-        if (TEST > 0):
-            print("Modified locatin:")
-            print(mod_loc)
-            print("Train:")
-            print(mod_train)
-            print("Combined:")
-            print(combined)
+
         mod_loc = mod_loc.reset_index().drop('date', axis=1)
+
         mod_loc = mod_loc.drop_duplicates().set_index('location')
 
         return mod_train, mod_loc
@@ -237,7 +210,7 @@ class Subset(object):
         if (not longs):
             longs = np.arange(254,270)
         if (not times):
-            times = np.arange(15,25,3)
+            times = np.arange(12,25,3)
         if (elevs):
             bottom_elev = elevs[0]
             top_elev = elevs[1]
@@ -245,8 +218,8 @@ class Subset(object):
             print("Begin date: " + str(begin_date))
             print("End date: " + str(end_date))
             print("Models: " + ", ".join([str(mod) for mod in models]))
-        # Five times from 15 to 24 by 3
-        time_mod = (np.array(times) - 15)//3
+        # Five times from 12 to 24 by 3
+        time_mod = (np.array(times) - 12)//3
         if (TEST > 0):
             print(time_mod)
         # First latitude is at 31 and by one degree from there
@@ -261,9 +234,9 @@ class Subset(object):
         if (TEST > 0):
             print("Subset complete")
 
-        # drop into two dimensions so variables can be stacked
-        # it can later be manipulated for learning or exploring
-	    X = X.reshape(X.shape[0],np.prod(X.shape[1:])) 					 # Reshape into (n_examples,n_features)
+        ## drop into two dimensions so variables can be stacked
+        ## it can later be manipulated for learning or exploring
+        X = X.reshape(X.shape[0],np.prod(X.shape[1:]))                   # Reshape into (n_examples,n_features)
 
         return X
 
