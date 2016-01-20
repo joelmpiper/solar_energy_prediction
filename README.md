@@ -3,5 +3,5 @@
 
 <img src="images/gefs_mesonet_stations.png" width="1024">
 
-In the process of switching the analysis infrastructure from beat-the-benchmark to my code. There are still some transition issues between the stages of the analysis. The wrangle code should return appropriate subsets of the variables for train X, y and test X, but I need to transition the model to take this input instead of the beat-the-benchmark input. The chain should work with *benchmark* set to *True*.
+In the process of switching the analysis infrastructure from beat-the-benchmark to my code. The script in *bin/solar_admin.py* should run with a simple (non-distance-weighted) grid around each station point. This has still not been adequately tested.
 

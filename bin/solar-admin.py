@@ -35,9 +35,9 @@ def main(*argv):
     #test_dates = ['2008-12-29', '2009-01-05']
     #var = ['dswrf_sfc', 'uswrf_sfc', 'spfh_2m', 'ulwrf_tatm']
     #var = ['dswrf_sfc']
-    models = range(0,11)
-    station = 'all'
-    #times = [12]
+    models = [0]
+    station = ['all']
+    times = [18]
     #lats = range(35,37)
     #longs = range(260,262)
     #solar_array = SolarData(var=var, models=models, lats=lats,
@@ -48,7 +48,7 @@ def main(*argv):
                                  'solar/data/kaggle_solar/train.csv',
                                  'solar/data/kaggle_solar/test/',
                                  'solar/data/kaggle_solar/station_info.csv',
-                                 new_feats, models=models, station=station)
+                                 new_feats, station=station)
     param_array = {'alpha':np.logspace(-3,1,8,base=10)}
     model = Model.model(solar_array, Ridge, param_array, 10,
                         'mean_absolute_error', normalize=True)
