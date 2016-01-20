@@ -51,7 +51,7 @@ class Subset(object):
                                  parse_dates=['Date'])
         rot_df = pd.DataFrame(train_data.unstack().reset_index()[:])
         rot_df.rename(columns={'level_0':'location','Date':'date',
-                            0:'total_solar'}, inplace=True)
+                               0:'total_solar'}, inplace=True)
         rot_df.set_index('date',inplace=True)
         loc_df = pd.read_csv(loc_file, index_col='stid')
 
@@ -67,10 +67,12 @@ class Subset(object):
             longs = [min(longs), max(longs)]
         # if we are making any specifications on the output data, then
         # reduce what is returned to conform with those specifications
+        #"""
         if(station or lats or longs or elevs or train_dates):
             rot_df, loc_df = Subset.reduced_training(
                 rot_df, loc_df, train_dates, station, lat_specs,
                 long_specs, elevs)
+        #"""
         return rot_df, loc_df
 
 
@@ -80,16 +82,19 @@ class Subset(object):
 
             Take the output data and location data and return the reduced set.
         """
-
+        mod_train = rot_df.sort_index()
+        mod_loc = loc_df
         # check if there are a reduced list of stations
         if (station):
-            mod_train = rot_df[rot_df['location'].isin(station)]
-            mod_loc = loc_df.loc[station,:]
+            if ('all' in station):
+                pass
+            else:
+                mod_train = rot_df[rot_df['location'].isin(station)]
+                mod_loc = loc_df.loc[station,:]
         # if there are a list of stations, then we don't want to choose the
         # stations by any other parameters (so else not separate ifs)
+
         else:
-            mod_train = rot_df
-            mod_loc = loc_df
             if (lat):
                mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lat,
                                                     'lat', rot_df.columns,
@@ -104,11 +109,16 @@ class Subset(object):
                                                     loc_df.columns)
         # on the other hand, the date cuts can be paired with any of the other
         # cuts and only affects output data (not location)
+
         if (date):
-            mod_train.sort_index(inplace=True)
+            # Move this earlier so I'm not implicitly sorting rot_df
+            # This generates a warning
+
+            #mod_train.sort_index(inplace=True)
             mod_train = mod_train.loc[date[0]:date[1],:].reset_index()
             mod_train = mod_train.sort_values(['location','date'])
             mod_train = mod_train.set_index('date')
+
         return mod_train, mod_loc
 
 
@@ -119,10 +129,11 @@ class Subset(object):
         combined = train.merge(loc, left_on='location',
                                     right_index=True)
 
+
         combined = combined[(combined[var_name] >= var[0]) &
                             (combined[var_name] <= var[1])]
 
-        mod_train = combined[train_split].drop_duplicates()
+        mod_train = combined[train_split]
 
         mod_loc = combined[loc_split.union(['location'])]
 
@@ -198,7 +209,7 @@ class Subset(object):
         end_date = len(X[1][:])
         bottom_elev = -100
         top_elev = 30000
-        # if date values are provided revice the ranges
+        # if date values are provided revise the ranges
         if (input_date):
             dates = X[1][:]
             begin_date, end_date = Subset.check_dates(dates, input_date)

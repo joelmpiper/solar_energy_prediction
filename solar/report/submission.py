@@ -12,17 +12,16 @@ import cPickle as pickle
 import sys
 import os
 import csv
+import datetime
 sys.path.append(os.getcwd())
 from solar.wrangle.wrangle import SolarData
 from solar.analyze.model import Model
 from sklearn.linear_model import Ridge
-from sklearn.cross_validation import train_test_split
-from sklearn import metrics
 
 class Submission(object):
     """ Load the solar data from the gefs and mesonet files """
 
-    def __init__(self, benchmark=True, pickle=False,
+    def __init__(self, benchmark=False, pickle=False,
                  input_model=None, input_data=None,
                  model_pickle='',
                  input_pickle=''):
@@ -34,9 +33,37 @@ class Submission(object):
         if (pickle):
             self.load_pickle()
         else:
-            self.get_model(input_model)
+            if (benchmark):
+                self.get_benchmark_model(input_model)
+            else:
+                get_model(input_model, input_data[1], input_data[2])
 
-    def get_model(self, input_model):
+    @staticmethod
+    def make_submission_file(model, trainy, testX):
+        """ Take a model and list of x and return a csv with predictions.
+
+        Make submission file containing y predictions based on the the given
+        input model and test X.
+        """
+
+        preds = model.predict(testX)
+
+        with open('solar/submissions/submission_' +
+                  datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") +
+                  '.csv', 'wb') as fout:
+
+            fwriter = csv.writer(fout)
+            fwriter.writerow(['Date'] + list(trainy.columns))
+            for i, val in enumerate(testX.index):
+                row = [val.strftime("%Y%m%d")]
+                row = row + [x[0] for x in zip(preds[i])]
+                fwriter.writerow(row)
+
+        pickle.dump(preds,
+                    open("solar/data/kaggle_solar/preds.p","wb"))
+        return preds
+
+    def get_benchmark_model(self, input_model):
 
 
         def save_submission(preds,data_dir):
