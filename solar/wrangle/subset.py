@@ -4,10 +4,14 @@
     joelmpiper [at] gmail.com
 """
 
+import sys
+import os
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
 from datetime import datetime as pydt
+sys.path.append(os.getcwd())
+from solar.base.decorator import memoized
 
 TEST = 0
 class Subset(object):
@@ -214,40 +218,18 @@ class Subset(object):
             dates = X[1][:]
             begin_date, end_date = Subset.check_dates(dates, input_date)
 
-        if (not models):
-            models = np.arange(0,11)
-        if (not lats):
-            lats = np.arange(31,40)
-        if (not longs):
-            longs = np.arange(254,270)
-        if (not times):
-            times = np.arange(12,25,3)
         if (elevs):
             bottom_elev = elevs[0]
             top_elev = elevs[1]
-        if (TEST > 0):
-            print("Begin date: " + str(begin_date))
-            print("End date: " + str(end_date))
-            print("Models: " + ", ".join([str(mod) for mod in models]))
-        # Five times from 12 to 24 by 3
-        time_mod = (np.array(times) - 12)//3
-        if (TEST > 0):
-            print(time_mod)
-        # First latitude is at 31 and by one degree from there
-        lat_mod = np.array(lats) - 31
-        if (TEST > 0):
-            print (lat_mod)
-        # First longitude at 254 and by one degree from there
-        long_mod = np.array(longs) - 254
-        if (TEST > 0):
-            print (long_mod)
-        X = X[-1][begin_date:end_date,models,time_mod,lat_mod,long_mod]
+
+        X = np.array(X[-1])[begin_date:end_date, models, times, lats, longs]
+
         if (TEST > 0):
             print("Subset complete")
 
         ## drop into two dimensions so variables can be stacked
         ## it can later be manipulated for learning or exploring
-        X = X.reshape(X.shape[0],np.prod(X.shape[1:]))                   # Reshape into (n_examples,n_features)
+        X = X.reshape(X.shape[0],np.prod(X.shape[1:]))
 
         return X
 
@@ -259,19 +241,22 @@ class Subset(object):
         np array.
         """
 
-        date_range = [pydt.strptime(str(myDate), "%Y%m%d%H")
-                    for myDate in dates]
-        begin_date = date_range.index(
-            pydt.strptime(input_date[0],"%Y-%m-%d"))
-        if(TEST > 0):
-            print begin_date
+        #date_range = [convert_time(myDate) for myDate in dates]
+        #begin_date = date_range.index(
+        #    pydt.strptime(input_date[0],"%Y-%m-%d"))
+        beg_split = input_date[0].split('-')
+        beg_ind = int(beg_split[0] + beg_split[1] + beg_split[2] + '00')
+        begin_date = np.where(dates == beg_ind)[0]
+
+        end_split = input_date[1].split('-')
+        end_ind = int(end_split[0] + end_split[1] + end_split[2] + '00')
+        end_date = np.where(dates == end_ind)[0]
         # Add a 1 at the end to include the date in the range
-        end_date = date_range.index(pydt.strptime(
-            input_date[1],"%Y-%m-%d")) + 1
-        if(TEST > 0):
-            print end_date
+        #end_date = date_range.index(pydt.strptime(
+            #input_date[1],"%Y-%m-%d")) + 1
 
         return begin_date, end_date
+
 
 if __name__ == '__main__':
     s = Subset(trainX_file='solar/data/kaggle_solar/train/',

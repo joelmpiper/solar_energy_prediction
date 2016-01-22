@@ -129,6 +129,7 @@ class SolarData(object):
         testX_df = pd.merge(test_index, pd.DataFrame(test_X),
                             left_index=True, right_index=True)
 
+        print trainX_df
         # Reorder so that these can be used like variables
         trainX_df = trainX_df.set_index(['variable', 'date', 'model',
                              'time', 'lat', 'lon']).unstack('variable')[0]
@@ -171,12 +172,12 @@ class SolarData(object):
                 'ulwrf_tatm','pwat_eatm','tcdc_eatm','apcp_sfc','pres_msl',
                 'spfh_2m','tcolc_eatm','tmax_2m','tmin_2m','tmp_2m','tmp_sfc'
             ]
-        if (not models):
-            models = np.arange(0,11)
-        if (not lats):
-            lats = np.arange(31,40)
-        if (not longs):
-            longs = np.arange(254,270)
+        #if (not models):
+            #models = np.arange(0,11)
+        #if (not lats):
+            #lats = np.arange(31,40)
+        #if (not longs):
+            #longs = np.arange(254,270)
 
         # if we are using a grid, ignore lat and long and just use
         # how the points are relative to station
@@ -184,14 +185,14 @@ class SolarData(object):
             lats = ['S', 'N']
             longs = ['W', 'E']
 
-        if (not times):
-            times = np.arange(12,25,3)
+        #if (not times):
+            #times = np.arange(12,25,3)
         col_names = ['variable', 'date', 'model', 'time', 'lat', 'lon']
         new_tr_indices = pd.DataFrame(list(itertools.product(
-            var, tr_date_index, models, times, lats,longs)))
+            var, tr_date_index, models[0][0][0], times[0][0], lats,longs)))
         new_tr_indices.columns = col_names
         new_ts_indices = pd.DataFrame(list(itertools.product(
-            var, ts_date_index, models, times, lats,longs)))
+            var, ts_date_index, models[0][0][0], times[0][0], lats,longs)))
         new_ts_indices.columns = col_names
         return new_tr_indices, new_ts_indices
 
@@ -252,6 +253,30 @@ class SolarData(object):
                         'longs', 'elevs', 'times']:
                 X_params[key] = value
 
+
+        if ('lats' not in X_params.keys() or not X_params['lats']):
+            X_params['lats'] = np.arange(31,40)
+        if ('longs' not in X_params.keys() or not X_params['longs']):
+            X_params['longs'] = np.arange(254,270)
+        if ('models' not in X_params.keys() or not X_params['models']):
+            # In order to select all other dimensions, need to reshape with
+            # empty axis
+            X_params['models'] = np.arange(0,11)
+        if ('times' not in X_params.keys() or not X_params['times']):
+            X_params['times'] = np.arange(12,25,3)
+
+        X_params['models'] = (np.array(X_params['models']))[:, np.newaxis,
+                                                            np.newaxis,
+                                                            np.newaxis]
+        # Five times from 12 to 24 by 3
+        X_params['times'] = ((np.array(X_params['times']) - 12)//3)[
+            :, np.newaxis, np.newaxis]
+        # First latitude is at 31 and by one degree from there
+        X_params['lats'] = (np.array(X_params['lats']) - 31)[:,np.newaxis]
+        # First longitude at 254 and by one degree from there
+        X_params['longs'] = (np.array(X_params['longs']) - 254)
+
+
         return X_params, y_params
 
 
@@ -263,7 +288,6 @@ if __name__ == '__main__':
     train_dates = ['2005-07-29', '2005-08-02']
     test_dates = ['2008-12-29', '2009-01-05']
     var = ['dswrf_sfc', 'uswrf_sfc', 'spfh_2m', 'ulwrf_tatm']
-    models = [0, 10]
     lats = range(34,37)
     longs = range(260,264)
     solar_array = SolarData(pickle=False, benchmark=False, var=var,

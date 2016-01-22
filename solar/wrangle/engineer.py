@@ -22,6 +22,7 @@ class Engineer(object):
     def __init__(self, trainX_file):
         self.trainX_file = trainX_file
 
+
     @staticmethod
     def create_grid(trainX_dir, testX_dir, Xparams, loc_df):
         """ take the station north, east, south, and west of each of
@@ -29,23 +30,21 @@ class Engineer(object):
         return the new file.
         """
 
-        for i, sta in enumerate(loc_df.index):
+        Xparams['lats'] = []
+        Xparams['longs'] = []
+        for sta in loc_df.index:
             stlat = loc_df.loc[sta].lat
             stlong = loc_df.loc[sta].lon
-            lats = range(int(np.floor(stlat)), int(np.ceil(stlat)) + 1)
-            longs = range(int(np.floor(stlong)), int(np.ceil(stlong)) + 1)
-            Xparams['lats'] = lats
-            Xparams['longs'] = longs
-            sta_train, sta_test = Subset.create_Xdata(
-                trainX_dir, testX_dir, **Xparams)
-            if (i == 0):
-                train_grid = sta_train
-                test_grid = sta_test
-            else:
-                train_grid = np.vstack((train_grid, sta_train))
-                test_grid = np.vstack((test_grid, sta_test))
+            # Subtract 34 because we are storing indices
+            lats = 2*[int(np.floor(stlat)) - 34] + 2*[
+                int(np.ceil(stlat)) + 1 - 34]
+            # Subtract 254 because we are storing indices
+            longs = 2*[int(np.floor(stlong)) - 254, int(np.ceil(stlong)) + 1
+                       - 254]
+            Xparams['lats'].append(lats)
+            Xparams['longs'].append(longs)
 
-        return train_grid, test_grid
+        return Subset.create_Xdata(trainX_dir, testX_dir, **Xparams)
 
 
     @staticmethod

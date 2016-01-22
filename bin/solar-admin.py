@@ -35,9 +35,9 @@ def main(*argv):
     #test_dates = ['2008-12-29', '2009-01-05']
     #var = ['dswrf_sfc', 'uswrf_sfc', 'spfh_2m', 'ulwrf_tatm']
     #var = ['dswrf_sfc']
-    models = [0]
+    #models = [0]
     station = ['all']
-    times = [18]
+    #times = [18]
     #lats = range(35,37)
     #longs = range(260,262)
     #solar_array = SolarData(var=var, models=models, lats=lats,
