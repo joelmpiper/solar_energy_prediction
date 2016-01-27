@@ -4,16 +4,13 @@
     joelmpiper [at] gmail.com
 """
 
-import sys
-import os
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
-from datetime import datetime as pydt
-sys.path.append(os.getcwd())
-from solar.base.decorator import memoized
 
 TEST = 0
+
+
 class Subset(object):
     """ This returns the appropriate complementary training X, y and testing
     X and y.
@@ -28,7 +25,6 @@ class Subset(object):
             self.trainX_file, self.trainy_file, self.testX_file,
             self.testy_file)
 
-
     @staticmethod
     def subset(trainX_dir, trainy_file, testX_dir, loc_file, X_par, y_par):
         """ Returns the X, y, and location data cut by the parameters specified.
@@ -41,10 +37,8 @@ class Subset(object):
         trainy, loc = Subset.create_ydata(trainy_file, loc_file, **y_par)
         return trainX, trainy, testX, loc
 
-
     @staticmethod
-    def create_ydata(train_file, loc_file, train_dates=[], station=[], lats=[],
-                     longs=[], elevs=[]):
+    def create_ydata(train_file, loc_file, train_dates, stations):
         """ Returns a dataframes of the y data and the location data.
 
             Create dataframes by reading in the training and location files;
@@ -63,90 +57,29 @@ class Subset(object):
         loc_df.rename(columns={'nlat':'lat','elon':'lon'}, inplace=True)
         loc_df.index.names = ['location']
 
-        lat_specs = []
-        long_specs = []
-        if (lats):
-            lat_specs = [min(lats), max(lats)]
-        if (longs):
-            longs = [min(longs), max(longs)]
         # if we are making any specifications on the output data, then
         # reduce what is returned to conform with those specifications
-        #"""
-        if(station or lats or longs or elevs or train_dates):
-            rot_df, loc_df = Subset.reduced_training(
-                rot_df, loc_df, train_dates, station, lat_specs,
-                long_specs, elevs)
-        #"""
+        rot_df, loc_df = Subset.reduced_training(
+            rot_df, loc_df, train_dates, stations)
         return rot_df, loc_df
 
-
     @staticmethod
-    def reduced_training(rot_df, loc_df, date, station, lat, lon, elev):
+    def reduced_training(rot_df, loc_df, date, station):
         """ Returns the y output and location data subsets given the parameters.
 
             Take the output data and location data and return the reduced set.
         """
-        mod_train = rot_df.sort_index()
-        mod_loc = loc_df
-        # check if there are a reduced list of stations
-        if (station):
-            if ('all' in station):
-                pass
-            else:
-                mod_train = rot_df[rot_df['location'].isin(station)]
-                mod_loc = loc_df.loc[station,:]
-        # if there are a list of stations, then we don't want to choose the
-        # stations by any other parameters (so else not separate ifs)
 
-        else:
-            if (lat):
-               mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lat,
-                                                    'lat', rot_df.columns,
-                                                    loc_df.columns)
-            if (lon):
-               mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, lon,
-                                                    'lon', rot_df.columns,
-                                                    loc_df.columns)
-            if (elev):
-                mod_train, mod_loc = Subset.cut_var(mod_train, mod_loc, elev,
-                                                    'elev', rot_df.columns,
-                                                    loc_df.columns)
-        # on the other hand, the date cuts can be paired with any of the other
-        # cuts and only affects output data (not location)
+        # only return data for the given stations
+        mod_train = rot_df[rot_df['location'].isin(station)]
+        mod_loc = loc_df.loc[station,:]
 
-        if (date):
-            # Move this earlier so I'm not implicitly sorting rot_df
-            # This generates a warning
-
-            #mod_train.sort_index(inplace=True)
-            mod_train = mod_train.loc[date[0]:date[1],:].reset_index()
-            mod_train = mod_train.sort_values(['location','date'])
-            mod_train = mod_train.set_index('date')
+        # only return data for the given dates
+        mod_train = mod_train.loc[date[0]:date[1], :].reset_index()
+        mod_train = mod_train.sort_values(['location','date'])
+        mod_train = mod_train.set_index('date')
 
         return mod_train, mod_loc
-
-
-    @staticmethod
-    def cut_var(train, loc, var, var_name, train_split, loc_split):
-        """ Take output dataframes and reduce the single variable. """
-
-        combined = train.merge(loc, left_on='location',
-                                    right_index=True)
-
-
-        combined = combined[(combined[var_name] >= var[0]) &
-                            (combined[var_name] <= var[1])]
-
-        mod_train = combined[train_split]
-
-        mod_loc = combined[loc_split.union(['location'])]
-
-        mod_loc = mod_loc.reset_index().drop('date', axis=1)
-
-        mod_loc = mod_loc.drop_duplicates().set_index('location')
-
-        return mod_train, mod_loc
-
 
     @staticmethod
     def create_Xdata(trainX_dir, testX_dir, var=[], train_dates=[],
@@ -175,7 +108,6 @@ class Subset(object):
 
         return trainX, testX
 
-
     @staticmethod
     def file_loop(input_dir, var, substr, dates, models, lats, longs,
                   times, elevs):
@@ -183,20 +115,16 @@ class Subset(object):
         """
 
         # First loop over the files for the specificed variables in the set
+        # Save each variables in a list. Each element is an ndarray
+        loaded = []
         for i,f in enumerate(var):
-            if i == 0:
-                X = Subset.cutX(input_dir + '/' + var[i] + substr,
-                                dates, models, lats, longs, times, elevs)
-            else:
-                X_new = Subset.cutX(input_dir + '/' + var[i] + substr,
-                                    dates, models, lats, longs, times,
-                                    elevs)
-                X = np.hstack((X,X_new))
-            if (TEST > 0):
-                print("Iteration " + str(i) + " complete.")
-                print("Variable: " + f)
-        return X
+            loaded.append(Subset.cutX(
+                input_dir + '/' + var[i] + substr, dates, models, lats,
+                longs, times, elevs))
 
+        # Combine all of the files into a single array
+        X = np.stack((loaded), axis=5)
+        return X
 
     @staticmethod
     def cutX(file_name, input_date, models=None,
@@ -218,21 +146,13 @@ class Subset(object):
             dates = X[1][:]
             begin_date, end_date = Subset.check_dates(dates, input_date)
 
-        if (elevs):
-            bottom_elev = elevs[0]
-            top_elev = elevs[1]
-
-        X = np.array(X[-1])[begin_date:end_date, models, times, lats, longs]
-
+        X = np.array(X[-1])[begin_date:(end_date+1), models, times, lats, longs]
         if (TEST > 0):
             print("Subset complete")
 
         ## drop into two dimensions so variables can be stacked
         ## it can later be manipulated for learning or exploring
-        X = X.reshape(X.shape[0],np.prod(X.shape[1:]))
-
         return X
-
 
     @staticmethod
     def check_dates(dates, input_date):

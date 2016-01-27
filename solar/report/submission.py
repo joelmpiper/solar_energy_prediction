@@ -7,16 +7,13 @@ https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/forums/t/5282/
 by Alec Radford.
 """
 
-import numpy as np
 import cPickle as pickle
-import sys
 import os
 import csv
 import datetime
-sys.path.append(os.getcwd())
 from solar.wrangle.wrangle import SolarData
 from solar.analyze.model import Model
-from sklearn.linear_model import Ridge
+
 
 class Submission(object):
     """ Load the solar data from the gefs and mesonet files """
@@ -36,10 +33,11 @@ class Submission(object):
             if (benchmark):
                 self.get_benchmark_model(input_model)
             else:
-                get_model(input_model, input_data[1], input_data[2])
+                Submission.make_submission_file(input_model, input_data[1],
+                                                input_data[2])
 
     @staticmethod
-    def make_submission_file(model, trainy, testX):
+    def make_submission_file(model, trainy, testX, eng_feats={}):
         """ Take a model and list of x and return a csv with predictions.
 
         Make submission file containing y predictions based on the the given
@@ -47,31 +45,36 @@ class Submission(object):
         """
 
         preds = model.predict(testX)
-
+        if ('grid' in eng_feats):
+            testX = testX.unstack('station')
+            trainy = trainy.unstack('location')
+            preds = preds.reshape(testX.shape[0], trainy.shape[1])
+            column_names = trainy['total_solar'].columns
+        else:
+            column_names = trainy.columns
         with open('solar/submissions/submission_' +
                   datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") +
                   '.csv', 'wb') as fout:
 
             fwriter = csv.writer(fout)
-            fwriter.writerow(['Date'] + list(trainy.columns))
+            fwriter.writerow(['Date'] + list(column_names))
             for i, val in enumerate(testX.index):
                 row = [val.strftime("%Y%m%d")]
                 row = row + [x[0] for x in zip(preds[i])]
                 fwriter.writerow(row)
 
         pickle.dump(preds,
-                    open("solar/data/kaggle_solar/preds.p","wb"))
+                    open("solar/data/kaggle_solar/preds.p", "wb"))
         return preds
 
-    def get_benchmark_model(self, input_model):
+    def get_benchmark_model(self, input_model, input_data):
 
-
-        def save_submission(preds,data_dir):
-            fexample = open(os.path.join(data_dir,'sampleSubmission.csv'))
-            fout = open('sample.csv','wb')
-            fReader = csv.reader(fexample,delimiter=',', skipinitialspace=True)
+        def save_submission(preds, data_dir):
+            fexample = open(os.path.join(data_dir, 'sampleSubmission.csv'))
+            fout = open('sample.csv', 'wb')
+            fReader = csv.reader(fexample, delimiter=',', skipinitialspace=True)
             fwriter = csv.writer(fout)
-            for i,row in enumerate(fReader):
+            for i, row in enumerate(fReader):
                 if i == 0:
                     fwriter.writerow(row)
                 else:
@@ -80,10 +83,9 @@ class Submission(object):
             fexample.close()
             fout.close()
 
-
         if (self.input_pickle):
-            model = pickle.load(open(input_model,'rb'))
-            __, __, __, testX = pickle.load(open(input_data,'rb'))
+            model = pickle.load(open(input_model, 'rb'))
+            __, __, __, testX = pickle.load(open(input_data, 'rb'))
         elif (input_model):
             model = input_model.model
             __, __, __, testX = self.input_data.data
@@ -98,19 +100,18 @@ class Submission(object):
         print 'Saving to csv...'
         save_submission(preds, 'solar/data/kaggle_solar/')
 
-        self.preds =preds
+        self.preds = preds
         pickle.dump(preds,
-                    open("solar/data/kaggle_solar/preds.p","wb"))
+                    open("solar/data/kaggle_solar/preds.p", "wb"))
 
         return
 
-
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):
-        return pickle.load(open(pickle_dir + '/preds.p','rb'))
+        return pickle.load(open(pickle_dir + '/preds.p', 'rb'))
 
 
 if __name__ == '__main__':
     preds = Submission(input_pickle=False)
-    #trainX, trainY, times = (data.load('solar/data/kaggle_solar/train/',
-    #                        'solar/data/kaggle_solar/', 'all'))
+#    trainX, trainY, times = (data.load('solar/data/kaggle_solar/train/',
+#                            'solar/data/kaggle_solar/', 'all'))
     print preds
