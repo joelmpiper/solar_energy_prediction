@@ -20,8 +20,7 @@ class Subset(object):
         self.trainX_file = trainX_file
         self.trainy_file = trainy_file
         self.testX_file = testX_file
-        self.testy_file = testy
-        self.trainX, self.trainy, self.testX, self.testy, self.loc = subset(
+        self.trainX, self.trainy, self.testX, self.loc = Subset.subset(
             self.trainX_file, self.trainy_file, self.testX_file,
             self.testy_file)
 
@@ -48,13 +47,13 @@ class Subset(object):
         train_data = pd.read_csv(train_file, index_col='Date',
                                  parse_dates=['Date'])
         rot_df = pd.DataFrame(train_data.unstack().reset_index()[:])
-        rot_df.rename(columns={'level_0':'location','Date':'date',
-                               0:'total_solar'}, inplace=True)
-        rot_df.set_index('date',inplace=True)
+        rot_df.rename(columns={'level_0': 'location', 'Date': 'date',
+                               0: 'total_solar'}, inplace=True)
+        rot_df.set_index('date', inplace=True)
         loc_df = pd.read_csv(loc_file, index_col='stid')
 
         loc_df['elon'] = loc_df['elon'] + 360
-        loc_df.rename(columns={'nlat':'lat','elon':'lon'}, inplace=True)
+        loc_df.rename(columns={'nlat': 'lat', 'elon': 'lon'}, inplace=True)
         loc_df.index.names = ['location']
 
         # if we are making any specifications on the output data, then
@@ -72,11 +71,11 @@ class Subset(object):
 
         # only return data for the given stations
         mod_train = rot_df[rot_df['location'].isin(station)]
-        mod_loc = loc_df.loc[station,:]
+        mod_loc = loc_df.loc[station, :]
 
         # only return data for the given dates
         mod_train = mod_train.loc[date[0]:date[1], :].reset_index()
-        mod_train = mod_train.sort_values(['location','date'])
+        mod_train = mod_train.sort_values(['location', 'date'])
         mod_train = mod_train.set_index('date')
 
         return mod_train, mod_loc
@@ -135,7 +134,7 @@ class Subset(object):
         np array.
         """
 
-        X = nc.Dataset(file_name,'r+').variables.values()
+        X = nc.Dataset(file_name, 'r+').variables.values()
 
         # set defaults
         begin_date = 0
@@ -162,9 +161,6 @@ class Subset(object):
         np array.
         """
 
-        #date_range = [convert_time(myDate) for myDate in dates]
-        #begin_date = date_range.index(
-        #    pydt.strptime(input_date[0],"%Y-%m-%d"))
         beg_split = input_date[0].split('-')
         beg_ind = int(beg_split[0] + beg_split[1] + beg_split[2] + '00')
         begin_date = np.where(dates == beg_ind)[0]
@@ -172,9 +168,6 @@ class Subset(object):
         end_split = input_date[1].split('-')
         end_ind = int(end_split[0] + end_split[1] + end_split[2] + '00')
         end_date = np.where(dates == end_ind)[0]
-        # Add a 1 at the end to include the date in the range
-        #end_date = date_range.index(pydt.strptime(
-            #input_date[1],"%Y-%m-%d")) + 1
 
         return begin_date, end_date
 
