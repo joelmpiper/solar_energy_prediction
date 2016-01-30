@@ -40,12 +40,13 @@ class Engineer(object):
         return Subset.create_Xdata(trainX_dir, testX_dir, **Xparams)
 
     @staticmethod
-    def engineer(trainX_dir, yfile, testX_dir, locfile,
-                 Xparams, yparams, features):
+    def engineer(trainX_dir, testX_dir, locy,
+                 Xparams, train_dates, stations, feature):
 
-        y_df, loc_df = Subset.create_ydata(yfile, locfile, **yparams)
-
-        if ('grid' in features):
+        if (feature == 'grid'):
             trainX, testX = Engineer.create_grid(trainX_dir, testX_dir,
-                                                 Xparams, loc_df)
-        return trainX, y_df, testX, loc_df
+                                                 Xparams, locy)
+        else:
+            trainX, testX = None, None
+
+        return trainX, testX

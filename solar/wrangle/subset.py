@@ -84,16 +84,17 @@ class Subset(object):
     @staticmethod
     def create_Xdata(trainX_dir, testX_dir, var=[], train_dates=[],
                      test_dates=[], models=[], lats=[], longs=[],
-                     times=[], elevs=[]):
+                     times=[], elevs=[], station=[]):
         """ Return an np array of X data with the given cuts.
         """
         # The default is all of the files, so load them all if none are
         # specified
-        if ((not var) or var[0] == 'all'):
+        if ((var.size == 0) or ('all' in var)):
             var = [
-                'dswrf_sfc','dlwrf_sfc','uswrf_sfc','ulwrf_sfc',
-                'ulwrf_tatm','pwat_eatm','tcdc_eatm','apcp_sfc','pres_msl',
-                'spfh_2m','tcolc_eatm','tmax_2m','tmin_2m','tmp_2m','tmp_sfc'
+                'dswrf_sfc', 'dlwrf_sfc', 'uswrf_sfc', 'ulwrf_sfc',
+                'ulwrf_tatm', 'pwat_eatm', 'tcdc_eatm', 'apcp_sfc', 'pres_msl',
+                'spfh_2m', 'tcolc_eatm', 'tmax_2m', 'tmin_2m', 'tmp_2m',
+                'tmp_sfc'
             ]
 
         train_sub_str = '_latlon_subset_19940101_20071231.nc'
@@ -117,13 +118,13 @@ class Subset(object):
         # First loop over the files for the specificed variables in the set
         # Save each variables in a list. Each element is an ndarray
         loaded = []
-        for i,f in enumerate(var):
+        for i, f in enumerate(var):
             loaded.append(Subset.cutX(
                 input_dir + '/' + var[i] + substr, dates, models, lats,
                 longs, times, elevs))
 
         # Combine all of the files into a single array
-        X = np.stack((loaded), axis=5)
+        X = np.stack((loaded), axis=-1)
         return X
 
     @staticmethod
@@ -139,19 +140,19 @@ class Subset(object):
         # set defaults
         begin_date = 0
         end_date = len(X[1][:])
-        bottom_elev = -100
-        top_elev = 30000
         # if date values are provided revise the ranges
         if (input_date):
             dates = X[1][:]
             begin_date, end_date = Subset.check_dates(dates, input_date)
 
-        X = np.array(X[-1])[begin_date:(end_date+1), models, times, lats, longs]
+        X = np.array(X[-1])[begin_date:(end_date+1),
+                            models[:, np.newaxis, np.newaxis, np.newaxis],
+                            times[:, np.newaxis, np.newaxis],
+                            lats,
+                            longs]
         if (TEST > 0):
             print("Subset complete")
 
-        ## drop into two dimensions so variables can be stacked
-        ## it can later be manipulated for learning or exploring
         return X
 
     @staticmethod

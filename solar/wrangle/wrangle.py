@@ -151,7 +151,8 @@ class SolarData(object):
 
     @staticmethod
     def create_index(eng_feat, station_names, train_dates=[], test_dates=[],
-                     var=[], models=[], lats=[], longs=[], times=[]):
+                     var=[], models=[], lats=[], longs=[], times=[],
+                     station=[]):
         """ Create an index based on the input X parameters and the
         engineered features.
         """
@@ -172,7 +173,7 @@ class SolarData(object):
             ts_date_index = np.arange(np.datetime64('2008-01-01'),
                                       np.datetime64('2012-12-01'),
                                       dtype='datetime64')
-        if ((not var) or var[0] == 'all'):
+        if ((var.size == 0) or ('all' in var)):
             var = [
                 'dswrf_sfc', 'dlwrf_sfc', 'uswrf_sfc', 'ulwrf_sfc',
                 'ulwrf_tatm', 'pwat_eatm', 'tcdc_eatm', 'apcp_sfc', 'pres_msl',
@@ -181,8 +182,8 @@ class SolarData(object):
 
         # if we are using a grid, ignore lat and long and just use
         # how the points are relative to station
-        time_ind = [time[0][0]*3 + 12 for time in times]
-        model_ind = [model[0][0][0] for model in models]
+        time_ind = [time*3 + 12 for time in times]
+        model_ind = [model for model in models]
         if ('grid' in eng_feat):
             lat_longs = ['SE', 'SW', 'NE', 'NW']
             col_names = ['date', 'model', 'time', 'station',
@@ -252,13 +253,14 @@ class SolarData(object):
         """
 
         mod_stations = SolarData.parse_parameters(station=stations)
-        trainy, locy = Subset.create_ydata(yfile, locfile, dates, stations)
+        trainy, locy = Subset.create_ydata(yfile, locfile, dates,
+                                           mod_stations['station'])
         trainy = trainy.reset_index()
         if (stat_layout):
             trainy = trainy.set_index(['date', 'location']).sort_index()
         else:
             trainy = trainy.pivot(index='date', columns='location',
-                                    values='total_solar')
+                                  values='total_solar')
         return trainy, locy
 
     @staticmethod
@@ -268,14 +270,46 @@ class SolarData(object):
         return testing and training dataframes.
         """
 
-        # start by resetting the index so that these can be more easily
+        # iterate over each of the included features and return the relevant
+        # parameters
+        for feat_type in features:
+            if (feat_type['type'] == 'relative'):
+
+                X_par = SolarData.parse_parameters(**features[0]['axes'])
+                X_par['train_dates'] = train_dates
+                X_par['test_dates'] = test_dates
+
+                eng_feat = 'grid'
+                trainX, testX = Engineer.engineer(
+                    trainX_dir, testX_dir,
+                    locy, X_par,
+                    train_dates, stations, eng_feat)
+
+        # Reshape into one column for exploration
+        trainX = trainX.reshape(np.product(trainX.shape[:]))
+        testX = testX.reshape(np.product(testX.shape[:]))
+        stations = X_par['station']
+        del X_par['station']
+        train_index, test_index = SolarData.create_index(
+            eng_feat, stations, **X_par)
+        trainX = pd.merge(train_index, pd.DataFrame(trainX),
+                          left_index=True, right_index=True)
+        testX = pd.merge(test_index, pd.DataFrame(testX),
+                         left_index=True, right_index=True)
         # manipulated no matter the form that they returned in
+
+        # start by resetting the index so that these can be more easily
         trainX = trainX.reset_index()
         testX = testX.reset_index()
 
         # the included columns will be different depending on the included
         # features
-        all_cols = trainX.columns
+
+        trainX.rename(columns={0: features[0]['type']}, inplace=True)
+        testX.rename(columns={0: features[0]['type']}, inplace=True)
+        trainX.drop('index', axis=1, inplace=True)
+        testX.drop('index', axis=1, inplace=True)
+        all_cols = list(trainX.columns)[:-1]
 
         # we don't want the indices to be columns, so use all of the columns
         # for indices
@@ -287,17 +321,13 @@ class SolarData(object):
         # date and station
         diff_cols = []
         if (station_layout):
-            diff_cols = ['date', 'station']
+            diff_cols = {'date', 'station'}
         else:
-            diff_cols = ['date']
+            diff_cols = {'date'}
 
         # With the known columns move the other indices to the top
-        trainX = trainX.unstack(all_cols.difference(diff_cols))
-        testX = testX.unstack(all_cols.difference(diff_cols))
-
-        # One additional column that isn't needed with a date index
-        trainX.drop('index', axis=1, inplace=True)
-        testX.drop('index', axis=1, inplace=True)
+        trainX = trainX.unstack(list(set(all_cols).difference(diff_cols)))
+        testX = testX.unstack(list(set(all_cols).difference(diff_cols)))
 
         return trainX, testX
 
@@ -315,7 +345,48 @@ class SolarData(object):
 
         pickle.dump((trainX, trainy, testX, locy),
                     open("solar/data/kaggle_solar/all_input.p", "wb"))
-        return trainX, trainy, testX
+        return trainX, trainy, testX, locy
+
+    @staticmethod
+    def fill_default(param):
+        if (param == 'station'):
+            return [
+                'ACME', 'ADAX', 'ALTU', 'APAC', 'ARNE', 'BEAV', 'BESS',
+                'BIXB', 'BLAC', 'BOIS', 'BOWL', 'BREC', 'BRIS', 'BUFF',
+                'BURB', 'BURN', 'BUTL', 'BYAR', 'CAMA', 'CENT', 'CHAN',
+                'CHER', 'CHEY', 'CHIC', 'CLAY', 'CLOU', 'COOK', 'COPA',
+                'DURA', 'ELRE', 'ERIC', 'EUFA', 'FAIR', 'FORA', 'FREE',
+                'FTCB', 'GOOD', 'GUTH', 'HASK', 'HINT', 'HOBA', 'HOLL',
+                'HOOK', 'HUGO', 'IDAB', 'JAYX', 'KENT', 'KETC', 'LAHO',
+                'LANE', 'MADI', 'MANG', 'MARE', 'MAYR', 'MCAL', 'MEDF',
+                'MEDI', 'MIAM', 'MINC', 'MTHE', 'NEWK', 'NINN', 'NOWA',
+                'OILT', 'OKEM', 'OKMU', 'PAUL', 'PAWN', 'PERK', 'PRYO',
+                'PUTN', 'REDR', 'RETR', 'RING', 'SALL', 'SEIL', 'SHAW',
+                'SKIA', 'SLAP', 'SPEN', 'STIG', 'STIL', 'STUA', 'SULP',
+                'TAHL', 'TALI', 'TIPT', 'TISH', 'VINI', 'WASH', 'WATO',
+                'WAUR', 'WEAT', 'WEST', 'WILB', 'WIST', 'WOOD', 'WYNO']
+        elif (param == 'models'):
+            return np.arange(0, 11)
+        elif (param == 'times'):
+            return np.arange(0, 6)
+        elif (param == 'lats'):
+            return np.arange(0, 9)
+        elif (param == 'longs'):
+            return np.arange(0, 16)
+        else:
+            return None
+
+    @staticmethod
+    def make_index(key, val):
+        value = np.array(val)
+        if (key == 'times'):
+            return (value - 12)//3
+        elif (key == 'lats'):
+            return value - 34
+        elif (key == 'longs'):
+            return value - 254
+        else:
+            return value
 
     @staticmethod
     def parse_parameters(**kwargs):
@@ -328,52 +399,15 @@ class SolarData(object):
 
         # iterate over all of the passed items
         for key, value in kwargs.iteritems():
-            if (key == 'station'):
-                if ('all' in value):
-                    station = [
-                        'ACME', 'ADAX', 'ALTU', 'APAC', 'ARNE', 'BEAV', 'BESS',
-                        'BIXB', 'BLAC', 'BOIS', 'BOWL', 'BREC', 'BRIS', 'BUFF',
-                        'BURB', 'BURN', 'BUTL', 'BYAR', 'CAMA', 'CENT', 'CHAN',
-                        'CHER', 'CHEY', 'CHIC', 'CLAY', 'CLOU', 'COOK', 'COPA',
-                        'DURA', 'ELRE', 'ERIC', 'EUFA', 'FAIR', 'FORA', 'FREE',
-                        'FTCB', 'GOOD', 'GUTH', 'HASK', 'HINT', 'HOBA', 'HOLL',
-                        'HOOK', 'HUGO', 'IDAB', 'JAYX', 'KENT', 'KETC', 'LAHO',
-                        'LANE', 'MADI', 'MANG', 'MARE', 'MAYR', 'MCAL', 'MEDF',
-                        'MEDI', 'MIAM', 'MINC', 'MTHE', 'NEWK', 'NINN', 'NOWA',
-                        'OILT', 'OKEM', 'OKMU', 'PAUL', 'PAWN', 'PERK', 'PRYO',
-                        'PUTN', 'REDR', 'RETR', 'RING', 'SALL', 'SEIL', 'SHAW',
-                        'SKIA', 'SLAP', 'SPEN', 'STIG', 'STIL', 'STUA', 'SULP',
-                        'TAHL', 'TALI', 'TIPT', 'TISH', 'VINI', 'WASH', 'WATO',
-                        'WAUR', 'WEAT', 'WEST', 'WILB', 'WIST', 'WOOD', 'WYNO']
-                else:
-                    station = value
-                return_args['station'] = station
+            if ('all' in value):
+                return_args[key] = SolarData.fill_default(key)
+            else:
+                return_args[key] = SolarData.make_index(key, value)
 
-        """
-        if ('lats' not in X_params.keys() or not X_params['lats']):
-            X_params['lats'] = np.arange(31, 40)
-        if ('longs' not in X_params.keys() or not X_params['longs']):
-            X_params['longs'] = np.arange(254, 270)
-        if ('models' not in X_params.keys() or not X_params['models']):
-            # In order to select all other dimensions, need to reshape with
-            # empty axis
-            X_params['models'] = np.arange(0, 11)
-        if ('times' not in X_params.keys() or not X_params['times']):
-            X_params['times'] = np.arange(12, 25, 3)
+#        return_args['models']= (np.array(return_args['models']))[:, np.newaxis,
+        #                                                          np.newaxis,
+        #                                                          np.newaxis]
 
-        X_params['models'] = (np.array(X_params['models']))[:, np.newaxis,
-                                                            np.newaxis,
-                                                            np.newaxis]
-        # Five times from 12 to 24 by 3
-        X_params['times'] = ((np.array(X_params['times']) - 12)//3)[
-            :, np.newaxis, np.newaxis]
-        # First latitude is at 31 and by one degree from there
-        X_params['lats'] = (np.array(X_params['lats']) - 31)[:, np.newaxis]
-        # First longitude at 254 and by one degree from there
-        X_params['longs'] = (np.array(X_params['longs']) - 254)
-
-        return X_params, y_params, station
-        """
         return return_args
 
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):
