@@ -214,25 +214,30 @@ class SolarData(object):
                                               train_dates, test_dates,
                                               stations, feat_type)
 
-            all_cols = list(trainX.columns)[:-1]
+            train_cols = list(trainX.columns)[:-1]
 
             # we don't want the indices to be columns, so use all of the columns
             # for indices
-            trainX = trainX.set_index(all_cols)
-            testX = testX.set_index(all_cols)
+            trainX = trainX.set_index(train_cols)
+            test_cols = list(testX.columns)[:-1]
+            testX = testX.set_index(test_cols)
 
             # leave the row indices depending on what the data should look like
             # for the training model; either one row per date, or one row per
             # date and station
             diff_cols = []
             if (station_layout):
-                diff_cols = {'date', 'station'}
+                train_diff_cols = {'train_dates', 'station'}
+                test_diff_cols = {'test_dates', 'station'}
             else:
-                diff_cols = {'date'}
+                train_diff_cols = {'train_dates'}
+                test_diff_cols = {'test_dates'}
 
             # With the known columns move the other indices to the top
-            trainX = trainX.unstack(list(set(all_cols).difference(diff_cols)))
-            testX = testX.unstack(list(set(all_cols).difference(diff_cols)))
+            trainX = trainX.unstack(list(
+                set(train_cols).difference(train_diff_cols)))
+            testX = testX.unstack(list(
+                set(test_cols).difference(test_diff_cols)))
 
         return trainX, testX
 

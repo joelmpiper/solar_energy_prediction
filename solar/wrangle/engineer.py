@@ -86,8 +86,11 @@ class Engineer(object):
         stations = X_par['station']
         del X_par['station']
 
-        train_index, test_index = Engineer.create_index(
-            feature['type'], stations, **X_par)
+        lat_longs = ['SE', 'SW', 'NE', 'NW']
+        train_index = Engineer.create_index(
+            train_dates=train_dates, lat_longs=lat_longs, **feature['axes'])
+        test_index = Engineer.create_index(
+            test_dates=test_dates, lat_longs=lat_longs, **feature['axes'])
         trainX = pd.merge(train_index, pd.DataFrame(trainX),
                           left_index=True, right_index=True)
         testX = pd.merge(test_index, pd.DataFrame(testX),
@@ -109,9 +112,9 @@ class Engineer(object):
         return trainX, testX
 
     @staticmethod
-    def fill_default(param):
+    def fill_default_val(param):
         if (param == 'station'):
-            return np.array((
+            return [
                 'ACME', 'ADAX', 'ALTU', 'APAC', 'ARNE', 'BEAV', 'BESS',
                 'BIXB', 'BLAC', 'BOIS', 'BOWL', 'BREC', 'BRIS', 'BUFF',
                 'BURB', 'BURN', 'BUTL', 'BYAR', 'CAMA', 'CENT', 'CHAN',
@@ -125,40 +128,55 @@ class Engineer(object):
                 'PUTN', 'REDR', 'RETR', 'RING', 'SALL', 'SEIL', 'SHAW',
                 'SKIA', 'SLAP', 'SPEN', 'STIG', 'STIL', 'STUA', 'SULP',
                 'TAHL', 'TALI', 'TIPT', 'TISH', 'VINI', 'WASH', 'WATO',
-                'WAUR', 'WEAT', 'WEST', 'WILB', 'WIST', 'WOOD', 'WYNO'))
+                'WAUR', 'WEAT', 'WEST', 'WILB', 'WIST', 'WOOD', 'WYNO']
         elif (param == 'models'):
-            return np.arange(0, 11)
+            return range(0, 11)
         elif (param == 'times'):
-            return np.arange(0, 6)
+            return range(12, 25, 3)
         elif (param == 'lats'):
-            return np.arange(0, 9)
+            return range(34, 43)
         elif (param == 'longs'):
-            return np.arange(0, 16)
+            return range(254, 270)
         elif (param == 'var'):
-            return np.array((
+            return [
                 'dswrf_sfc', 'dlwrf_sfc', 'uswrf_sfc', 'ulwrf_sfc',
                 'ulwrf_tatm', 'pwat_eatm', 'tcdc_eatm', 'apcp_sfc', 'pres_msl',
                 'spfh_2m', 'tcolc_eatm', 'tmax_2m', 'tmin_2m', 'tmp_2m',
-                'tmp_sfc'))
+                'tmp_sfc']
+        elif (param == 'train_dates'):
+            return ['1994-01-01', '2007-12-31']
+        elif (param == 'test_dates'):
+            return ['2008-01-01', '2012-11-30']
         else:
             return None
 
     @staticmethod
-    def make_index_num(key, val):
-        value = np.array(val)
-        if (key == 'times'):
-            return (value - 12)//3
-        elif (key == 'lats'):
-            return value - 34
-        elif (key == 'longs'):
-            return value - 254
-        else:
-            return value
+    def make_index_num(**kwargs):
+        """ Take a list of values and set them to their index number if it is
+        not already the default index numbers
+        """
+
+        # iterate over all passed items
+        indexed_args = {}
+        for key, val in kwargs.iteritems():
+            value = np.array(val)
+            if (key == 'times'):
+                value = (value - 12)//3
+            elif (key == 'lats'):
+                value = value - 34
+            elif (key == 'longs'):
+                value = value - 254
+            elif (key == 'train_dates'):
+                value = [value[0], value[-1]]
+            elif (key == 'test_dates'):
+                value = [value[0], value[-1]]
+            indexed_args[key] = value
+        return indexed_args
 
     @staticmethod
-    def parse_parameters(**kwargs):
-        """ Take a set of parameters and fill it with defaults. Return the
-        passed parameters.
+    def fill_default(**kwargs):
+        """ Fill all the values in the dictionary with value 'all' with the
+        appropriate default values.
         """
 
         # Start building the return dictionary
@@ -167,69 +185,34 @@ class Engineer(object):
         # iterate over all of the passed items
         for key, value in kwargs.iteritems():
             if ('all' in value):
-                return_args[key] = Engineer.fill_default(key)
+                return_args[key] = Engineer.fill_default_val(key)
             else:
-                return_args[key] = Engineer.make_index_num(key, value)
-
+                return_args[key] = value
+            if ((key == 'train_dates') or (key == 'test_dates')):
+                return_args[key] = np.arange(
+                    np.datetime64(value[0]), np.datetime64(value[1]) + 1,
+                    dtype='datetime64')
         return return_args
 
     @staticmethod
-    def create_index(eng_feat, station_names, train_dates=[], test_dates=[],
-                     var=[], models=[], lats=[], longs=[], times=[],
-                     station=[]):
+    def parse_parameters(**kwargs):
+        """ Take a set of parameters and fill it with defaults. Then,
+        convert the values to indices and return the passed parameters.
+        """
+
+        return_args = Engineer.fill_default(**kwargs)
+        indexed_args = Engineer.make_index_num(**return_args)
+
+        return indexed_args
+
+    @staticmethod
+    def create_index(**kwargs):
         """ Create an index based on the input X parameters and the
         engineered features.
         """
-        if (train_dates):
-            tr_date_index = np.arange(
-                train_dates[0], np.datetime64(train_dates[1])+1,
-                dtype='datetime64')
-        else:
-            tr_date_index = np.arange(np.datetime64('1994-01-01'),
-                                      np.datetime64('2008-01-01'),
-                                      dtype='datetime64')
-        if (test_dates):
-            ts_date_index = np.arange(
-                test_dates[0], np.datetime64(test_dates[1])+1,
-                dtype='datetime64')
-        else:
-            ts_date_index = np.arange(np.datetime64('2008-01-01'),
-                                      np.datetime64('2012-12-01'),
-                                      dtype='datetime64')
-        if ((var.size == 0) or ('all' in var)):
-            var = [
-                'dswrf_sfc', 'dlwrf_sfc', 'uswrf_sfc', 'ulwrf_sfc',
-                'ulwrf_tatm', 'pwat_eatm', 'tcdc_eatm', 'apcp_sfc', 'pres_msl',
-                'spfh_2m', 'tcolc_eatm', 'tmax_2m', 'tmin_2m', 'tmp_2m',
-                'tmp_sfc']
-
-        # if we are using a grid, ignore lat and long and just use
-        # how the points are relative to station
-        time_ind = [time*3 + 12 for time in times]
-        model_ind = [model for model in models]
-        if ('relative' in eng_feat):
-            lat_longs = ['SE', 'SW', 'NE', 'NW']
-            col_names = ['date', 'model', 'time', 'station',
-                         'lat_longs', 'variable']
-            new_tr_indices = pd.DataFrame(list(itertools.product(
-                tr_date_index, model_ind, time_ind, station_names,
-                lat_longs, var)))
-            new_tr_indices.columns = col_names
-            new_ts_indices = pd.DataFrame(list(itertools.product(
-                ts_date_index, model_ind, time_ind, station_names,
-                lat_longs, var)))
-            new_ts_indices.columns = col_names
-
-        else:
-            col_names = ['variable', 'date', 'model', 'time', 'lat', 'lon']
-            lat_ind = lats[0] + 34
-            lon_ind = longs + 254
-            new_tr_indices = pd.DataFrame(list(itertools.product(
-                var, tr_date_index, model_ind, time_ind, lat_ind, lon_ind)))
-            new_tr_indices.columns = col_names
-
-            new_ts_indices = pd.DataFrame(list(itertools.product(
-                var, ts_date_index, model_ind, time_ind, lat_ind, lon_ind)))
-            new_ts_indices.columns = col_names
-
-        return new_tr_indices, new_ts_indices
+        param_dict = Engineer.fill_default(**kwargs)
+        col_names = param_dict.keys()
+        new_indices = pd.DataFrame(list(
+            itertools.product(*param_dict.values())))
+        new_indices.columns = col_names
+        return new_indices
