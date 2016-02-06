@@ -209,36 +209,20 @@ class SolarData(object):
 
         # iterate over each of the included features and return the relevant
         # parameters
-        for feat_type in features:
-            trainX, testX = Engineer.engineer(trainX_dir, testX_dir, locy,
-                                              train_dates, test_dates,
-                                              stations, feat_type)
-
-            train_cols = list(trainX.columns)[:-1]
-
-            # we don't want the indices to be columns, so use all of the columns
-            # for indices
-            trainX = trainX.set_index(train_cols)
-            test_cols = list(testX.columns)[:-1]
-            testX = testX.set_index(test_cols)
+        for i, feat_type in enumerate(features):
+            temp_train, temp_test = Engineer.engineer(
+                trainX_dir, testX_dir, locy, train_dates, test_dates, stations,
+                station_layout, feat_type)
 
             # leave the row indices depending on what the data should look like
             # for the training model; either one row per date, or one row per
             # date and station
-            diff_cols = []
-            if (station_layout):
-                train_diff_cols = {'train_dates', 'station'}
-                test_diff_cols = {'test_dates', 'station'}
+            if (i == 0):
+                trainX = temp_train
+                testX = temp_test
             else:
-                train_diff_cols = {'train_dates'}
-                test_diff_cols = {'test_dates'}
-
-            # With the known columns move the other indices to the top
-            trainX = trainX.unstack(list(
-                set(train_cols).difference(train_diff_cols)))
-            testX = testX.unstack(list(
-                set(test_cols).difference(test_diff_cols)))
-
+                trainX = pd.concat([trainX, temp_train], axis=1)
+                testX = pd.concat([testX, temp_test], axis=1)
         return trainX, testX
 
     @staticmethod

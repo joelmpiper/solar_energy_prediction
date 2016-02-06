@@ -25,5 +25,5 @@ trainX, trainy, testX, locy = SolarData.load(
     trainX_dir, trainy_file, testX_dir, loc_file, train_dates, test_dates,
     stations, sta_layout, stat_feats)
 
-assert(trainX.loc['2005-11-30', 'ACME']['station_names', 'name'] == 'ACME')
-assert(trainX.loc['2005-01-01', 'BEAV']['station_names', 'name'] == 'BEAV')
+assert(trainX.loc['2005-11-30', 'ACME']['stat_ACME'] == 1)
+assert(trainX.loc['2006-01-01', 'BEAV']['stat_ACME'] == 0)

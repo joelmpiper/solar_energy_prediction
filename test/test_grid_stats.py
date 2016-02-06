@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" Test the functionality of building the X data from file
+""" Test the functionality of creating X data from station names and the
+grid variables.
 """
 
 from solar.wrangle.wrangle import SolarData
@@ -27,13 +28,17 @@ times = [18, 21]
 default_grid = {'type': 'relative', 'axes': {'var': var, 'models': model,
                                              'times': times,
                                              'station': stations}}
-just_grid = [default_grid]
 
-__, locy = SolarData.load_trainy(trainy_file, loc_file, train_dates,
-                                 stations, sta_layout)
-trainX, testX = SolarData.make_features(trainX_dir, testX_dir, locy,
-                                        train_dates, test_dates, stations,
-                                        sta_layout, just_grid)
+# This just uses the station_names as another feature
+stat_names = {'type': 'station_names'}
+grid_stats_feats = [default_grid, stat_names]
+
+trainX, trainy, testX, locy = SolarData.load(
+    trainX_dir, trainy_file, testX_dir, loc_file, train_dates, test_dates,
+    stations, sta_layout, grid_stats_feats)
+
+assert(trainX.loc['2005-11-30', 'ACME']['stat_ACME'] == 1)
+assert(trainX.loc['2006-01-01', 'BEAV']['stat_ACME'] == 0)
 assert (trainX.loc['2005-11-30', 'ACME']['relative', 0, 'uswrf_sfc', 'SE',
                                          18] == 48)
 assert (trainX.loc['2005-11-30', 'ACME']['relative', 7, 'dswrf_sfc', 'SW',

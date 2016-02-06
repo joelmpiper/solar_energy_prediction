@@ -50,7 +50,7 @@ class Engineer(object):
 
     @staticmethod
     def engineer(trainX_dir, testX_dir, locy, train_dates, test_dates,
-                 stations, feature):
+                 stations, station_layout, feature):
         """ Add the passed feature and return the train and test X data
         and the indices that correspond to the data.
         """
@@ -58,7 +58,12 @@ class Engineer(object):
         if (feature['type'] == 'relative'):
             trainX, testX = Engineer.make_relative(trainX_dir, testX_dir, locy,
                                                    train_dates, test_dates,
-                                                   stations, feature)
+                                                   stations, station_layout,
+                                                   feature)
+        elif (feature['type'] == 'station_names'):
+            trainX, testX = Engineer.make_station_names(
+                train_dates, test_dates, stations, station_layout, feature)
+
         else:
             trainX, testX = None, None
 
@@ -66,7 +71,7 @@ class Engineer(object):
 
     @staticmethod
     def make_relative(trainX_dir, testX_dir, locy, train_dates, test_dates,
-                      stations, feature):
+                      stations, station_layout, feature):
         """ Create the features given the list of input variables, models,
         etc., for a grid of points surrounding the station list.
         """
@@ -109,6 +114,96 @@ class Engineer(object):
         trainX.drop('index', axis=1, inplace=True)
         testX.drop('index', axis=1, inplace=True)
 
+        train_cols = list(trainX.columns)[:-1]
+        test_cols = list(testX.columns)[:-1]
+
+        # we don't want the indices to be columns, so use all of the columns
+        # for indices
+        trainX = trainX.set_index(train_cols)
+        testX = testX.set_index(test_cols)
+
+        if (station_layout):
+            train_diff_cols = {'train_dates', 'station'}
+            test_diff_cols = {'test_dates', 'station'}
+        else:
+            train_diff_cols = {'train_dates'}
+            test_diff_cols = {'test_dates'}
+
+        # With the known columns move the other indices to the top
+        trainX = trainX.unstack(list(
+            set(train_cols).difference(train_diff_cols)))
+        testX = testX.unstack(list(
+            set(test_cols).difference(test_diff_cols)))
+
+        trainX = trainX.sort_index()
+        testX = testX.sort_index()
+
+        return trainX, testX
+
+    @staticmethod
+    def make_station_names(train_dates, test_dates, stations, station_layout,
+                           feature):
+        """ Takes the dates of the training dates, test dates, and the station
+        names and returns the X train and X test data.
+        """
+
+        results = Engineer.parse_parameters(station=stations)
+        stations = results['station']
+
+        train_index = Engineer.create_index(
+            train_dates=train_dates, station=stations)
+        test_index = Engineer.create_index(
+            test_dates=test_dates, station=stations)
+
+        trainX = train_index
+        testX = test_index
+
+        trainX['station_name'] = train_index.loc[:,'station']
+        testX['station_name'] = test_index.loc[:,'station']
+        # start by resetting the index so that these can be more easily
+        trainX = trainX.reset_index()
+        testX = testX.reset_index()
+        train_dum = pd.get_dummies(trainX['station_name'], prefix='stat')
+        test_dum = pd.get_dummies(testX['station_name'], prefix='stat')
+        trainX = pd.merge(trainX, train_dum.iloc[:, :-1], left_on='index',
+                           right_index=True)
+        testX = pd.merge(testX, test_dum.iloc[:, :-1], left_on='index',
+                         right_index=True)
+        trainX.drop('station_name', axis=1, inplace=True)
+        testX.drop('station_name', axis=1, inplace=True)
+        trainX.rename(columns={0: feature['type']}, inplace=True)
+        testX.rename(columns={0: feature['type']}, inplace=True)
+        trainX.drop('index', axis=1, inplace=True)
+        testX.drop('index', axis=1, inplace=True)
+
+        # list the columns that are part of the index
+        # subtract off the data columns (remember we lose one in getting
+        # dummies)
+        print stations
+        print len(stations)
+        train_cols = list(trainX.columns)[:(1 - len(stations))]
+        test_cols = list(testX.columns)[:(1 - len(stations))]
+
+        # we don't want the indices to be columns, so use all of the columns
+        # for indices
+        trainX = trainX.set_index(train_cols)
+        testX = testX.set_index(test_cols)
+
+        if (station_layout):
+            train_diff_cols = {'train_dates', 'station'}
+            test_diff_cols = {'test_dates', 'station'}
+        else:
+            train_diff_cols = {'train_dates'}
+            test_diff_cols = {'test_dates'}
+
+        # With the known columns move the other indices to the top
+        trainX = trainX.unstack(list(
+            set(train_cols).difference(train_diff_cols)))
+        testX = testX.unstack(list(
+            set(test_cols).difference(test_diff_cols)))
+
+        trainX = trainX.swaplevel(0, 1, axis=0).sort_index()
+        testX = testX.swaplevel(0, 1, axis=0).sort_index()
         return trainX, testX
 
     @staticmethod
