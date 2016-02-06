@@ -7,6 +7,8 @@ specific days.
 import numpy as np
 import pandas as pd
 import itertools
+import datetime
+
 from solar.wrangle.subset import Subset
 
 TEST = 0
@@ -19,6 +21,18 @@ class Engineer(object):
 
     def __init__(self, trainX_file):
         self.trainX_file = trainX_file
+
+    @staticmethod
+    def frac_dist(locy):
+        """ Return the fractional part of the latitude and longitude measures.
+        """
+
+        lat_dist = []
+        long_dist = []
+        for sta in locy.index:
+            lat_dist.append(locy.loc[sta].lat % 1)
+            long_dist.append(locy.loc[sta].lon % 1)
+        return lat_dist, long_dist
 
     @staticmethod
     def create_grid(trainX_dir, testX_dir, loc_df, train_dates, test_dates,
@@ -64,8 +78,93 @@ class Engineer(object):
             trainX, testX = Engineer.make_station_names(
                 train_dates, test_dates, stations, station_layout, feature)
 
+        elif (feature['type'] == 'frac_dist'):
+            trainX, testX = Engineer.make_frac_dist(
+                locy, train_dates, test_dates, stations, station_layout,
+                feature)
+
+        elif (feature['type'] == 'days_from_solstice'):
+            trainX, testX = Engineer.make_days_from_solstice(
+                train_dates, test_dates, stations, station_layout, feature)
+
+        elif (feature['type'] == 'days_from_coldest'):
+            trainX, testX = Engineer.make_days_from_coldest(
+                train_dates, test_dates, stations, station_layout, feature)
+
         else:
             trainX, testX = None, None
+
+        return trainX, testX
+
+    @staticmethod
+    def make_frac_dist(locy, train_dates, test_dates, stations, station_layout,
+                       feature):
+
+        lat_dist, long_dist = Engineer.frac_dist(locy)
+        ret = Engineer.fill_default(train_dates=train_dates,
+                                    test_dates=test_dates,
+                                    station=stations)
+
+        stations = ret['station']
+
+        test_len = len(ret['test_dates'])
+        train_len = len(ret['train_dates'])
+
+        trainX = [val for val in lat_dist for i in range(train_len)] +\
+            [val for val in long_dist for i in range(train_len)]
+
+        testX = [val for val in lat_dist for i in range(test_len)] +\
+            [val for val in long_dist for i in range(test_len)]
+
+        dist_ind = ['lat_dist', 'long_dist']
+
+        train_index = Engineer.create_index(
+            train_dates=train_dates, station=stations, dist_ind=dist_ind)
+        test_index = Engineer.create_index(
+            test_dates=test_dates, station=stations, dist_ind=dist_ind)
+
+        trainX = pd.merge(train_index, pd.DataFrame(trainX),
+                          left_index=True, right_index=True)
+        testX = pd.merge(test_index, pd.DataFrame(testX),
+                         left_index=True, right_index=True)
+
+        # start by resetting the index so that these can be more easily
+        trainX = trainX.reset_index()
+        testX = testX.reset_index()
+
+        # the included columns will be different depending on the included
+        # features
+
+        trainX.rename(columns={0: feature['type']}, inplace=True)
+        testX.rename(columns={0: feature['type']}, inplace=True)
+        trainX.drop('index', axis=1, inplace=True)
+        testX.drop('index', axis=1, inplace=True)
+
+        train_cols = list(trainX.columns)[:-1]
+        test_cols = list(testX.columns)[:-1]
+
+        # we don't want the indices to be columns, so use all of the columns
+        # for indices
+        trainX = trainX.set_index(train_cols)
+        testX = testX.set_index(test_cols)
+        trainX = trainX.swaplevel(0, 2, axis=0)
+        testX = testX.swaplevel(0, 2, axis=0)
+
+        if (station_layout):
+            train_diff_cols = {'train_dates', 'station'}
+            test_diff_cols = {'test_dates', 'station'}
+        else:
+            train_diff_cols = {'train_dates'}
+            test_diff_cols = {'test_dates'}
+
+        # With the known columns move the other indices to the top
+        trainX = trainX.unstack(list(
+            set(train_cols).difference(train_diff_cols)))
+        testX = testX.unstack(list(
+            set(test_cols).difference(test_diff_cols)))
+
+        trainX = trainX.sort_index()
+        testX = testX.sort_index()
 
         return trainX, testX
 
@@ -141,6 +240,181 @@ class Engineer(object):
         return trainX, testX
 
     @staticmethod
+    def list_days_from(input_list, compare_date):
+        """ Return a list of the days away from a comparison date. """
+
+        return [Engineer.days_from(date1, compare_date) for date1 in
+                pd.DatetimeIndex(input_list)]
+
+    @staticmethod
+    def days_from(input_date, compare_date):
+        """ Calculate the days between the two dates
+        """
+
+        con_comp = datetime.datetime.strptime(compare_date, '%Y-%m-%d')
+
+        con_full = input_date
+
+        comp_date = datetime.date(con_full.year, con_comp.month, con_comp.day)
+
+        end_year = datetime.date(con_full.year, 12, 31)
+
+        abs_diff = abs((con_full.timetuple().tm_yday) -
+                       (comp_date.timetuple().tm_yday))
+
+        if (abs_diff >= 183):
+            final = end_year.timetuple().tm_yday - abs_diff
+        else:
+            final = abs_diff
+        return final
+
+    @staticmethod
+    def make_days_from_coldest(train_dates, test_dates, stations,
+                               station_layout, feature):
+        """ Return how far the date is from Jan 4 (a coldest approximation).
+        """
+
+        ret = Engineer.fill_default(train_dates=train_dates,
+                                    test_dates=test_dates,
+                                    station=stations)
+
+        train_cold = Engineer.list_days_from(ret['train_dates'],
+                                             '1995-01-04')
+        test_cold = Engineer.list_days_from(ret['test_dates'],
+                                            '1995-01-04')
+
+        test_len = len(ret['test_dates'])
+        train_len = len(ret['train_dates'])
+
+        trainX = train_cold * train_len
+        testX = test_cold * test_len
+
+        cold_ind = ['from_coldest']
+
+        train_index = Engineer.create_index(
+            train_dates=train_dates, station=stations, cold_ind=cold_ind)
+        test_index = Engineer.create_index(
+            test_dates=test_dates, station=stations, cold_ind=cold_ind)
+
+        trainX = pd.merge(train_index, pd.DataFrame(trainX),
+                          left_index=True, right_index=True)
+        testX = pd.merge(test_index, pd.DataFrame(testX),
+                         left_index=True, right_index=True)
+
+        # start by resetting the index so that these can be more easily
+        trainX = trainX.reset_index()
+        testX = testX.reset_index()
+
+        # the included columns will be different depending on the included
+        # features
+
+        trainX.rename(columns={0: feature['type']}, inplace=True)
+        testX.rename(columns={0: feature['type']}, inplace=True)
+        trainX.drop('index', axis=1, inplace=True)
+        testX.drop('index', axis=1, inplace=True)
+
+        train_cols = list(trainX.columns)[:-1]
+        test_cols = list(testX.columns)[:-1]
+
+        # we don't want the indices to be columns, so use all of the columns
+        # for indices
+        trainX = trainX.set_index(train_cols)
+        testX = testX.set_index(test_cols)
+
+        trainX = trainX.swaplevel(0, 2, axis=0)
+        testX = testX.swaplevel(0, 2, axis=0)
+
+        if (station_layout):
+            train_diff_cols = {'train_dates', 'station'}
+            test_diff_cols = {'test_dates', 'station'}
+        else:
+            train_diff_cols = {'train_dates'}
+            test_diff_cols = {'test_dates'}
+
+        # With the known columns move the other indices to the top
+        trainX = trainX.unstack(list(
+            set(train_cols).difference(train_diff_cols)))
+        testX = testX.unstack(list(
+            set(test_cols).difference(test_diff_cols)))
+
+        trainX = trainX.sort_index()
+        testX = testX.sort_index()
+
+        return trainX, testX
+
+    @staticmethod
+    def make_days_from_solstice(train_dates, test_dates, stations,
+                                station_layout, feature):
+        """ Return how far the date is from Dec 21 (a solstice approximation).
+        """
+
+        ret = Engineer.fill_default(train_dates=train_dates,
+                                    test_dates=test_dates,
+                                    station=stations)
+
+        train_solstice = Engineer.list_days_from(ret['train_dates'],
+                                                 '1995-12-21')
+        test_solstice = Engineer.list_days_from(ret['test_dates'],
+                                                '1995-12-21')
+
+        test_len = len(ret['test_dates'])
+        train_len = len(ret['train_dates'])
+
+        trainX = train_solstice * train_len
+        testX = test_solstice * test_len
+
+        sol_ind = ['from_solstice']
+
+        train_index = Engineer.create_index(
+            train_dates=train_dates, station=stations, sol_ind=sol_ind)
+        test_index = Engineer.create_index(
+            test_dates=test_dates, station=stations, sol_ind=sol_ind)
+
+        trainX = pd.merge(train_index, pd.DataFrame(trainX),
+                          left_index=True, right_index=True)
+        testX = pd.merge(test_index, pd.DataFrame(testX),
+                         left_index=True, right_index=True)
+
+        # start by resetting the index so that these can be more easily
+        trainX = trainX.reset_index()
+        testX = testX.reset_index()
+
+        # the included columns will be different depending on the included
+        # features
+
+        trainX.rename(columns={0: feature['type']}, inplace=True)
+        testX.rename(columns={0: feature['type']}, inplace=True)
+        trainX.drop('index', axis=1, inplace=True)
+        testX.drop('index', axis=1, inplace=True)
+
+        train_cols = list(trainX.columns)[:-1]
+        test_cols = list(testX.columns)[:-1]
+        # we don't want the indices to be columns, so use all of the columns
+        # for indices
+        trainX = trainX.set_index(train_cols)
+        testX = testX.set_index(test_cols)
+        trainX = trainX.swaplevel(0, 1, axis=0)
+        testX = testX.swaplevel(0, 1, axis=0)
+
+        if (station_layout):
+            train_diff_cols = {'train_dates', 'station'}
+            test_diff_cols = {'test_dates', 'station'}
+        else:
+            train_diff_cols = {'train_dates'}
+            test_diff_cols = {'test_dates'}
+
+        # With the known columns move the other indices to the top
+        trainX = trainX.unstack(list(
+            set(train_cols).difference(train_diff_cols)))
+        testX = testX.unstack(list(
+            set(test_cols).difference(test_diff_cols)))
+
+        trainX = trainX.sort_index()
+        testX = testX.sort_index()
+
+        return trainX, testX
+
+    @staticmethod
     def make_station_names(train_dates, test_dates, stations, station_layout,
                            feature):
         """ Takes the dates of the training dates, test dates, and the station
@@ -158,15 +432,15 @@ class Engineer(object):
         trainX = train_index
         testX = test_index
 
-        trainX['station_name'] = train_index.loc[:,'station']
-        testX['station_name'] = test_index.loc[:,'station']
+        trainX['station_name'] = train_index.loc[:, 'station']
+        testX['station_name'] = test_index.loc[:, 'station']
         # start by resetting the index so that these can be more easily
         trainX = trainX.reset_index()
         testX = testX.reset_index()
         train_dum = pd.get_dummies(trainX['station_name'], prefix='stat')
         test_dum = pd.get_dummies(testX['station_name'], prefix='stat')
         trainX = pd.merge(trainX, train_dum.iloc[:, :-1], left_on='index',
-                           right_index=True)
+                          right_index=True)
         testX = pd.merge(testX, test_dum.iloc[:, :-1], left_on='index',
                          right_index=True)
         trainX.drop('station_name', axis=1, inplace=True)
@@ -179,8 +453,6 @@ class Engineer(object):
         # list the columns that are part of the index
         # subtract off the data columns (remember we lose one in getting
         # dummies)
-        print stations
-        print len(stations)
         train_cols = list(trainX.columns)[:(1 - len(stations))]
         test_cols = list(testX.columns)[:(1 - len(stations))]
 
