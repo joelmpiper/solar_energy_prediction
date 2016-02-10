@@ -53,8 +53,8 @@ class Engineer(object):
             stlat = loc_df.loc[sta].lat
             stlong = loc_df.loc[sta].lon
             # Subtract 34 because we are storing indices
-            lats = 2*[int(np.floor(stlat)) - 34] + 2*[
-                int(np.ceil(stlat)) - 34]
+            lats = 2*[int(np.floor(stlat)) - 31] + 2*[
+                int(np.ceil(stlat)) - 31]
             # Subtract 254 because we are storing indices
             longs = 2*[int(np.floor(stlong)) - 254, int(np.ceil(stlong)) - 254]
             Xparams['lats'].append(lats)
@@ -501,7 +501,7 @@ class Engineer(object):
         elif (param == 'times'):
             return range(12, 25, 3)
         elif (param == 'lats'):
-            return range(34, 43)
+            return range(31, 40)
         elif (param == 'longs'):
             return range(254, 270)
         elif (param == 'var'):
@@ -530,7 +530,7 @@ class Engineer(object):
             if (key == 'times'):
                 value = (value - 12)//3
             elif (key == 'lats'):
-                value = value - 34
+                value = value - 31
             elif (key == 'longs'):
                 value = value - 254
             elif (key == 'train_dates'):

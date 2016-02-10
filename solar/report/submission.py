@@ -7,6 +7,7 @@ https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/forums/t/5282/
 by Alec Radford.
 """
 
+import logging
 import cPickle as pickle
 import os
 import csv
@@ -37,18 +38,44 @@ class Submission(object):
                                                 input_data[2])
 
     @staticmethod
-    def make_submission_file(model, trainy, testX, eng_feats={}):
+    def submit_from_pickle(pickle_model, pickle_data, station_format):
+
+        """ Run the model function from a pickled input
+        """
+        model_file = 'solar/data/kaggle_solar/models/' + pickle_model
+        model = pickle.load(open(model_file, 'rb'))
+        data_file = 'solar/data/kaggle_solar/inputs/' + pickle_data
+
+        __, trainy, testX, __ = pickle.load(open(data_file, 'rb'))
+
+        return Submission.make_submission_file(model, trainy, testX,
+                                               station_format)
+
+    @staticmethod
+    def make_submission_file(model, trainy, testX, station_format):
         """ Take a model and list of x and return a csv with predictions.
 
         Make submission file containing y predictions based on the the given
         input model and test X.
         """
 
+        file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+        logger.info('Started building submission file')
+
         preds = model.predict(testX)
-        if ('grid' in eng_feats):
-            testX = testX.unstack('station')
+        if (station_format):
+            print testX
+            print trainy
+            num_rows = len(testX.index.levels[0])
             trainy = trainy.unstack('location')
-            preds = preds.reshape(testX.shape[0], trainy.shape[1])
+            preds = preds.reshape(num_rows, trainy.shape[1])
             column_names = trainy['total_solar'].columns
         else:
             column_names = trainy.columns
@@ -58,13 +85,16 @@ class Submission(object):
 
             fwriter = csv.writer(fout)
             fwriter.writerow(['Date'] + list(column_names))
-            for i, val in enumerate(testX.index):
+            for i, val in enumerate(testX.index.levels[0]):
                 row = [val.strftime("%Y%m%d")]
                 row = row + [x[0] for x in zip(preds[i])]
                 fwriter.writerow(row)
 
-        pickle.dump(preds,
-                    open("solar/data/kaggle_solar/preds.p", "wb"))
+        logger.info('Finished building submission file')
+
+        pickle.dump((preds),
+                    open("solar/data/kaggle_solar/submissions/submit_" +
+                         file_time + ".p", "wb"))
         return preds
 
     def get_benchmark_model(self, input_model, input_data):

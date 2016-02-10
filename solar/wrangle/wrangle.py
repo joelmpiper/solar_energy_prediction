@@ -21,6 +21,8 @@ import netCDF4 as nc
 import numpy as np
 import cPickle as pickle
 import pandas as pd
+import logging
+import datetime
 from solar.wrangle.subset import Subset
 from solar.wrangle.engineer import Engineer
 
@@ -227,8 +229,22 @@ class SolarData(object):
 
     @staticmethod
     def load(trainX_dir, trainy_file, testX_dir, loc_file, train_dates,
-             test_dates, stations, station_layout, features):
+             test_dates, stations, station_layout, features, extern=False):
         """ Returns numpy arrays, of the training data """
+
+        file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+        logger.info('Started building test and training data')
+        logger.info('Features: %s' % (features))
+        logger.info('Train dates: %s' % (train_dates))
+        logger.info('Test dates: %s' % (test_dates))
+        logger.info('Stations: %s' % (stations))
 
         trainy, locy = SolarData.load_trainy(
             trainy_file, loc_file, train_dates, stations, station_layout)
@@ -237,8 +253,17 @@ class SolarData(object):
             trainX_dir, testX_dir, locy, train_dates, test_dates, stations,
             station_layout, features)
 
-        pickle.dump((trainX, trainy, testX, locy),
-                    open("solar/data/kaggle_solar/all_input.p", "wb"))
+        logger.info('Finished building test and training data')
+
+        if (extern):
+            pickle.dump((trainX, trainy, testX, locy),
+                        open('/Volumes/Seagate Backup Plus Drive/' +
+                             'kaggle_solar/inputs/input_' + file_time +
+                             '.p', 'wb'))
+        else:
+            pickle.dump((trainX, trainy, testX, locy),
+                        open("solar/data/kaggle_solar/inputs/input_" +
+                             file_time + ".p", "wb"))
         return trainX, trainy, testX, locy
 
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):

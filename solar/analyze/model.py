@@ -9,14 +9,15 @@ by Alec Radford.
 
 import numpy as np
 import cPickle as pickle
-import sys
-import os
-sys.path.append(os.getcwd())
+import datetime
+import logging
+from sklearn import metrics
 from solar.wrangle.wrangle import SolarData
 from sklearn.linear_model import Ridge
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sklearn.grid_search import GridSearchCV
+
 
 class Model(object):
     """ Load the solar data from the gefs and mesonet files """
@@ -24,7 +25,7 @@ class Model(object):
     def __init__(self, benchmark=False, pickle=False,
                  input_pickle='solar/data/kaggle_solar/all_input.p',
                  input_data=None, model=Ridge,
-                 param_dict={'alpha':np.logspace(-3,1,8,base=10)},
+                 param_dict={'alpha': np.logspace(-3, 1, 8, base=10)},
                  cv_splits=10, err_formula=mean_absolute_error,
                  **model_params):
 
@@ -40,8 +41,21 @@ class Model(object):
             else:
                 self.data = self.model(input_data, model, param_dict,
                                        cv_splits, err_formula,
-                                       **model_parameters)
+                                       **model_params)
 
+    @staticmethod
+    def model_from_pickle(pickle_name, model_name, param_dict, cv_splits,
+                          err_formula, extern=False, **model_params):
+        """ Run the model function from a pickled input
+        """
+        if (extern):
+            pickle_file = '/Volumes/Seagate Backup Plus Drive/' + pickle_name
+        else:
+            pickle_file = 'solar/data/kaggle_solar/inputs/' + pickle_name
+
+        input_data = pickle.load(open(pickle_file, 'rb'))
+        return Model.model(input_data, model_name, param_dict, cv_splits,
+                           err_formula, **model_params)
 
     @staticmethod
     def model(input_data, model_name, param_dict, cv_splits,
@@ -53,8 +67,25 @@ class Model(object):
         can be used for predictions.
         """
 
+        file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+        logger.info('Started building model')
+        logger.info('Train input columns: %s' % (input_data[0].columns))
+        logger.info('Train input indices: %s' % (input_data[0].index.levels))
+        logger.info('Test input indices: %s' % (input_data[2].index.levels))
+        logger.info('Model name: %s' % (model_name))
+        logger.info('Params: %s' % (param_dict))
+        logger.info('CV splits: %s' % (cv_splits))
+        logger.info('Error formula: %s' % (err_formula))
+        logger.info('Model params: %s' % (model_params))
         # The testX data is unneeded to create the model
-        trainX, trainy, __ = input_data
+        trainX, trainy, __, __ = input_data
 
         model = model_name(**model_params)
 
@@ -64,11 +95,15 @@ class Model(object):
 
         grid.fit(trainX, trainy)
 
+        logger.info('Best score: %s' % (grid.best_score_))
+        logger.info('Best params: %s' % (grid.best_params_))
+        logger.info('Best estimator: %s' % (grid.best_estimator_))
+
         pickle.dump((grid),
-                    open("solar/data/kaggle_solar/model.p","wb"))
+                    open("solar/data/kaggle_solar/models/model_" +
+                         file_time + ".p", "wb"))
 
         return grid
-
 
     @staticmethod
     def cv_loop(X, y, model, N):
@@ -82,14 +117,13 @@ class Model(object):
         MAEs = 0
         for i in range(N):
             X_train, X_cv, y_train, y_cv = train_test_split(
-                X, y, test_size=.20, random_state = i*7)
+                X, y, test_size=.20, random_state=(i * 7))
             model.fit(X_train, y_train)
             preds = model.predict(X_cv)
-            mae = metrics.mean_absolute_error(y_cv,preds)
+            mae = metrics.mean_absolute_error(y_cv, preds)
             print "MAE (fold %d/%d): %f" % (i + 1, N, mae)
             MAEs += mae
         return MAEs/N
-
 
     def model_benchmark(self, input_data):
         """ Takes input data and the Model class object and stores the
@@ -103,7 +137,7 @@ class Model(object):
 
         if (self.input_pickle):
             trainX, trainY, testX = pickle.load(open(
-                self.input_pickle,'rb'))
+                self.input_pickle, 'rb'))
         elif (self.input_data):
             trainX, trainY, testX = self.input_data
         else:
@@ -113,37 +147,33 @@ class Model(object):
         # Normalizing is usually a good idea
 
         print 'Finding best regularization value for alpha...'
-        alphas = np.logspace(-3,1,8,base=10)
+        alphas = np.logspace(-3, 1, 8, base=10)
         # List of alphas to check
-        #alphas = np.array(( 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 ))
         alphas = np.array((0.3, 0.2))
         maes = []
         for alpha in alphas:
             model.alpha = alpha
-            mae = Model.cv_loop(trainX,trainY,model,10)
+            mae = Model.cv_loop(trainX, trainY, model, 10)
             maes.append(mae)
-            print 'alpha %.4f mae %.4f' % (alpha,mae)
+            print 'alpha %.4f mae %.4f' % (alpha, mae)
         best_alpha = alphas[np.argmin(maes)]
         print ('Best alpha of %s with mean average error of %s'
-                % (best_alpha,np.min(maes)))
+               % (best_alpha, np.min(maes)))
 
         print 'Fitting model with best alpha...'
         model.alpha = best_alpha
-        model.fit(trainX,trainY)
+        model.fit(trainX, trainY)
 
         self.model = model
         pickle.dump((model),
-                    open("solar/data/kaggle_solar/model.p","wb"))
+                    open("solar/data/kaggle_solar/model.p", "wb"))
 
         return
 
-
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):
-        return pickle.load(open(pickle_dir + '/model.p','rb'))
+        return pickle.load(open(pickle_dir + '/model.p', 'rb'))
 
 
 if __name__ == '__main__':
     model = Model()
-    #trainX, trainY, times = (data.load('solar/data/kaggle_solar/train/',
-    #                        'solar/data/kaggle_solar/', 'all'))
     print Model
