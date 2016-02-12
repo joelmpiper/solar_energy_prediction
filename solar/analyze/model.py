@@ -55,7 +55,7 @@ class Model(object):
 
         input_data = pickle.load(open(pickle_file, 'rb'))
         return Model.model(input_data, model_name, param_dict, cv_splits,
-                           err_formula, **model_params)
+                           err_formula, n_jobs, **model_params)
 
     @staticmethod
     def model(input_data, model_name, param_dict, cv_splits,
