@@ -45,7 +45,7 @@ class Model(object):
 
     @staticmethod
     def model_from_pickle(pickle_name, model_name, param_dict, cv_splits,
-                          err_formula, extern=False, **model_params):
+                          err_formula, n_jobs, extern=False, **model_params):
         """ Run the model function from a pickled input
         """
         if (extern):
@@ -59,7 +59,7 @@ class Model(object):
 
     @staticmethod
     def model(input_data, model_name, param_dict, cv_splits,
-              err_formula, **model_params):
+              err_formula, n_jobs, **model_params):
         """ Takes input data which contains X and y training data, the
         name of the sklearn model, a dictionary of parameters, the number of
         cross_validation splits, the forumula to calulate errors in the fit,
@@ -91,7 +91,7 @@ class Model(object):
 
         # minimize mean absolute error (will be the check for the results)
         grid = GridSearchCV(model, param_dict, cv=cv_splits,
-                            scoring=err_formula)
+                            scoring=err_formula, n_jobs=n_jobs)
 
         grid.fit(trainX, trainy)
 
