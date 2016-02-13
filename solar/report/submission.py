@@ -38,21 +38,25 @@ class Submission(object):
                                                 input_data[2])
 
     @staticmethod
-    def submit_from_pickle(pickle_model, pickle_data, station_format):
+    def submit_from_pickle(pickle_model, pickle_data, station_format, write):
 
         """ Run the model function from a pickled input
         """
-        model_file = 'solar/data/kaggle_solar/models/' + pickle_model
+        if ((write == 'extern') or (write == 'local')):
+            file_base = 'solar/'
+        elif (write == 's3'):
+            file_base = '/home/ec2-user/mount_point/'
+        model_file = file_base + '/data/kaggle_solar/models/' + pickle_model
         model = pickle.load(open(model_file, 'rb'))
-        data_file = 'solar/data/kaggle_solar/inputs/' + pickle_data
+        data_file = file_base + '/data/kaggle_solar/inputs/' + pickle_data
 
         __, trainy, testX, __ = pickle.load(open(data_file, 'rb'))
 
         return Submission.make_submission_file(model, trainy, testX,
-                                               station_format)
+                                               station_format, write)
 
     @staticmethod
-    def make_submission_file(model, trainy, testX, station_format):
+    def make_submission_file(model, trainy, testX, station_format, write):
         """ Take a model and list of x and return a csv with predictions.
 
         Make submission file containing y predictions based on the the given
@@ -62,7 +66,11 @@ class Submission(object):
         file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        if (write == 's3'):
+            fh = logging.FileHandler('/home/ec2-user/mount_point/log/log_' +
+                                     file_time + '.log')
+        else:
+            fh = logging.FileHandler('log/log_' + file_time + '.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
@@ -79,7 +87,12 @@ class Submission(object):
             column_names = trainy['total_solar'].columns
         else:
             column_names = trainy.columns
-        with open('solar/submissions/submission_' +
+
+        if ((write == 'extern') or (write == 'local')):
+            file_base = 'solar/'
+        elif (write == 's3'):
+            file_base = '/home/ec2-user/mount_point/'
+        with open(file_base + '/submissions/submission_' +
                   datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") +
                   '.csv', 'wb') as fout:
 
@@ -93,8 +106,8 @@ class Submission(object):
         logger.info('Finished building submission file')
 
         pickle.dump((preds),
-                    open("solar/data/kaggle_solar/submissions/submit_" +
-                         file_time + ".p", "wb"))
+                    open(file_base + 'data/kaggle_solar/submissions/submit_' +
+                         file_time + '.p', 'wb'))
         return preds
 
     def get_benchmark_model(self, input_model, input_data):
