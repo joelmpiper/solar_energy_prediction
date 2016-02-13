@@ -266,8 +266,8 @@ class SolarData(object):
                              file_time + ".p", "wb"))
         elif (write == 's3'):
             pickle.dump((trainX, trainy, testX, locy),
-                        open("~/mount_point/data/kaggle_solar/inputs/input_" +
-                             file_time + ".p", "wb"))
+                        open("/home/ec2-user/mount_point/data/kaggle_solar/" +
+                             "inputs/input_" + file_time + ".p", "wb"))
         else:
             print("Error")
 

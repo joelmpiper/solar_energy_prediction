@@ -45,13 +45,18 @@ class Model(object):
 
     @staticmethod
     def model_from_pickle(pickle_name, model_name, param_dict, cv_splits,
-                          err_formula, n_jobs, extern=False, **model_params):
+                          err_formula, n_jobs, write, **model_params):
         """ Run the model function from a pickled input
         """
-        if (extern):
+        if (write == 'extern'):
             pickle_file = '/Volumes/Seagate Backup Plus Drive/' + pickle_name
-        else:
+        elif (write == 'local'):
             pickle_file = 'solar/data/kaggle_solar/inputs/' + pickle_name
+        elif (write == 's3'):
+            pickle_file = '/home/ec2-user/mount_point/data/kaggle_solar/' + \
+                'inputs/' + pickle_name
+        else:
+            print("None")
 
         input_data = pickle.load(open(pickle_file, 'rb'))
         return Model.model(input_data, model_name, param_dict, cv_splits,
@@ -59,7 +64,7 @@ class Model(object):
 
     @staticmethod
     def model(input_data, model_name, param_dict, cv_splits,
-              err_formula, n_jobs, **model_params):
+              err_formula, n_jobs, write, **model_params):
         """ Takes input data which contains X and y training data, the
         name of the sklearn model, a dictionary of parameters, the number of
         cross_validation splits, the forumula to calulate errors in the fit,
@@ -99,9 +104,16 @@ class Model(object):
         logger.info('Best params: %s' % (grid.best_params_))
         logger.info('Best estimator: %s' % (grid.best_estimator_))
 
-        pickle.dump((grid),
-                    open("solar/data/kaggle_solar/models/model_" +
-                         file_time + ".p", "wb"))
+        if ((write == 'local') or (write == 'extern')):
+            pickle.dump((grid),
+                        open("solar/data/kaggle_solar/models/model_" +
+                             file_time + ".p", "wb"))
+        elif (write == 's3'):
+            pickle.dump((grid),
+                        open("/home/ec2-user/mount_point/data/kaggle_solar/" +
+                             "models/model_" + file_time + ".p", "wb"))
+        else:
+            print "None"
 
         return grid
 
