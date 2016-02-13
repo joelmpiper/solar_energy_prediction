@@ -93,7 +93,7 @@ jobs = 15
 write = 's3'
 
 model = Model.model_from_pickle(
-    'input_2016-02-06-18-17-28.p', GradientBoostingRegressor,
+    'input_2016-02-13-04-09-55.p', GradientBoostingRegressor,
     {'n_estimators': range(100, 300, 100),
      'learning_rate': np.logspace(-3, 1, 5, base=10)}, cv_splits,
     error_formula, jobs, write, loss='ls', max_depth=1, random_state=0)
