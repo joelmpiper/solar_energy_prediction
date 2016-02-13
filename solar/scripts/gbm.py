@@ -40,7 +40,7 @@ station_layout = True
 var = ['all']
 
 # Keep model 0 (the default model) as a column for each of the variables (aggregated over other dimensions)
-model = [0]
+model = [0, 1]
 
 # Aggregate over all times
 times = ['all']
@@ -94,6 +94,6 @@ write = 's3'
 
 model = Model.model_from_pickle(
     'input_2016-02-06-18-17-28.p', GradientBoostingRegressor,
-    {'n_estimators': range(100, 500, 100),
-     'learning_rate': np.logspace(-3, 1, 5, base=10)}, error_formula, jobs,
+    {'n_estimators': range(100, 300, 100),
+     'learning_rate': np.logspace(-3, 1, 5, base=10)}, error_formula, 15,
     write, loss='ls', max_depth=1, random_state=0)

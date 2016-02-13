@@ -1,19 +1,16 @@
 
 # -*- coding: utf-8 -*-
 
-""" This file inlcudes the SolarData class. Although it is a class, I am
+""" This file includes the SolarData class. Although it is a class, I am
 currently not really using the object-oriented functionality and instead
-am just using the class as a namespace for static functions. There is still
-a lot of work to do to get this functioning appropriately.
-
+am just using the class as a namespace for static functions. Eventually,
+I may want to pull it out of the class or redesign using object-oriented
+principles.
 
 This includes the beat-the-benchmark files that are associated with
 the initial data wrangling. See the URL to the forum post with the code:
 https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/forums/t/5282/beating-the-benchmark-in-python-2230k-mae
 by Alec Radford.
-
-
-
 """
 
 import os
@@ -235,7 +232,11 @@ class SolarData(object):
         file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        if (write == 's3'):
+            fh = logging.FileHandler('/home/ec2-user/mount_point/log/log_' +
+                                     file_time + '.log')
+        else:
+            fh = logging.FileHandler('log/log_' + file_time + '.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
