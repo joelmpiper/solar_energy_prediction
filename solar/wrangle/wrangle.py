@@ -229,7 +229,7 @@ class SolarData(object):
 
     @staticmethod
     def load(trainX_dir, trainy_file, testX_dir, loc_file, train_dates,
-             test_dates, stations, station_layout, features, extern=False):
+             test_dates, stations, station_layout, features, write='local'):
         """ Returns numpy arrays, of the training data """
 
         file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -255,15 +255,22 @@ class SolarData(object):
 
         logger.info('Finished building test and training data')
 
-        if (extern):
+        if (write == 'extern'):
             pickle.dump((trainX, trainy, testX, locy),
                         open('/Volumes/Seagate Backup Plus Drive/' +
                              'kaggle_solar/inputs/input_' + file_time +
                              '.p', 'wb'))
-        else:
+        elif (write == 'local'):
             pickle.dump((trainX, trainy, testX, locy),
                         open("solar/data/kaggle_solar/inputs/input_" +
                              file_time + ".p", "wb"))
+        elif (write == 's3'):
+            pickle.dump((trainX, trainy, testX, locy),
+                        open("~/mount_point/data/kaggle_solar/inputs/input_" +
+                             file_time + ".p", "wb"))
+        else:
+            print("Error")
+
         return trainX, trainy, testX, locy
 
     def load_pickle(self, pickle_dir='solar/data/kaggle_solar/'):

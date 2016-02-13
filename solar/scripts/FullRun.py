@@ -40,7 +40,7 @@ station_layout = True
 var = ['all']
 
 # Keep model 0 (the default model) as a column for each of the variables (aggregated over other dimensions)
-model = [0]
+model = [0, 1]
 
 # Aggregate over all times
 times = ['all']
