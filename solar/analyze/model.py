@@ -60,7 +60,7 @@ class Model(object):
 
         input_data = pickle.load(open(pickle_file, 'rb'))
         return Model.model(input_data, model_name, param_dict, cv_splits,
-                           err_formula, n_jobs, **model_params)
+                           err_formula, n_jobs, write, **model_params)
 
     @staticmethod
     def model(input_data, model_name, param_dict, cv_splits,
@@ -75,7 +75,11 @@ class Model(object):
         file_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        fh = logging.FileHandler('log/log_' + file_time + '.log')
+        if (write == 's3'):
+            fh = logging.FileHandler('/home/ec2-user/mount_point/log/log_' +
+                                     file_time + '.log')
+        else:
+            fh = logging.FileHandler('log/log_' + file_time + '.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
