@@ -96,4 +96,4 @@ model = Model.model_from_pickle(
     'input_2016-02-13-04-09-55.p', GradientBoostingRegressor,
     {'n_estimators': [100],
      'learning_rate': [0.1]}, cv_splits,
-    error_formula, jobs, write, loss='ls', random_state=0)
+    error_formula, jobs, write, loss='ls', random_state=0, verbose=10)
