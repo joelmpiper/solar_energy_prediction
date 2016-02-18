@@ -102,7 +102,7 @@ class Model(object):
         grid = GridSearchCV(model, param_dict, cv=cv_splits,
                             scoring=err_formula, n_jobs=n_jobs)
 
-        grid.fit(trainX, trainy)
+        grid.fit(trainX, np.ravel(trainy))
 
         logger.info('Best score: %s' % (grid.best_score_))
         logger.info('Best params: %s' % (grid.best_params_))

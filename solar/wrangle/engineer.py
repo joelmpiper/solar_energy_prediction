@@ -283,8 +283,8 @@ class Engineer(object):
         test_cold = Engineer.list_days_from(ret['test_dates'],
                                             '1995-01-04')
 
-        test_len = len(ret['test_dates'])
-        train_len = len(ret['train_dates'])
+        test_len = len(ret['station'])
+        train_len = len(ret['station'])
 
         trainX = train_cold * train_len
         testX = test_cold * test_len
@@ -357,8 +357,8 @@ class Engineer(object):
         test_solstice = Engineer.list_days_from(ret['test_dates'],
                                                 '1995-12-21')
 
-        test_len = len(ret['test_dates'])
-        train_len = len(ret['train_dates'])
+        test_len = len(ret['station'])
+        train_len = len(ret['station'])
 
         trainX = train_solstice * train_len
         testX = test_solstice * test_len
