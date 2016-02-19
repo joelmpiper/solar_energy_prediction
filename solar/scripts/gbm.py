@@ -89,11 +89,11 @@ from sklearn import metrics
 error_formula = 'mean_absolute_error'
 
 cv_splits = 3
-jobs = 15
+jobs = 10
 write = 's3'
 
 model = Model.model_from_pickle(
     'input_2016-02-13-04-09-55.p', GradientBoostingRegressor,
-    {'n_estimators': [100],
-     'learning_rate': [0.1]}, cv_splits,
+    {'n_estimators': [300], 'max_depth': range(1, 5),
+     'learning_rate': [0.001, 0.01, 0.1, 1]}, cv_splits,
     error_formula, jobs, write, loss='ls', random_state=0, verbose=10)
