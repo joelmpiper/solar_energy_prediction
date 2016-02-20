@@ -213,8 +213,8 @@ class Engineer(object):
                          'var', 'lat_longs', 'values']
 
         # start by resetting the index so that these can be more easily
-        trainX = trainX.reset_index()
-        testX = testX.reset_index()
+        trainX.reset_index(inplace=True)
+        testX.reset_index(inplace=True)
 
         # the included columns will be different depending on the included
         # features
@@ -229,8 +229,8 @@ class Engineer(object):
 
         # we don't want the indices to be columns, so use all of the columns
         # for indices
-        trainX = trainX.set_index(train_cols)
-        testX = testX.set_index(test_cols)
+        trainX.set_index(train_cols, inplace=True)
+        testX.set_index(test_cols, inplace=True)
 
         if (station_layout):
             train_diff_cols = {'train_dates', 'station'}
@@ -245,8 +245,8 @@ class Engineer(object):
         testX = testX.unstack(list(
             set(test_cols).difference(test_diff_cols)))
 
-        trainX = trainX.sort_index()
-        testX = testX.sort_index()
+        trainX.sort_index(inplace=True)
+        testX.sort_index(inplace=True)
 
         return trainX, testX
 
