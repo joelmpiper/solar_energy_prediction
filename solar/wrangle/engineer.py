@@ -190,15 +190,24 @@ class Engineer(object):
         stations = X_par['station']
         del X_par['station']
 
-        lat_longs = ['SE', 'SW', 'NE', 'NW']
+        lat_longs = ['1_SE', '2_SW', '3_NE', '4_NW']
         train_index = Engineer.create_index(
             train_dates=train_dates, lat_longs=lat_longs, **feature['axes'])
         test_index = Engineer.create_index(
             test_dates=test_dates, lat_longs=lat_longs, **feature['axes'])
+        """
         trainX = pd.merge(train_index, pd.DataFrame(trainX),
                           left_index=True, right_index=True)
+                          """
         testX = pd.merge(test_index, pd.DataFrame(testX),
                          left_index=True, right_index=True)
+        train_index = train_index.sort_values(by=['train_dates', 'models',
+                                                  'times', 'station',
+                                                  'lat_longs'])
+        trainX = pd.DataFrame(np.hstack((train_index.values,
+                                         trainX[:, np.newaxis])))
+        trainX.columns = ['models', 'train_dates', 'times', 'station',
+                          'var', 'lat_longs', 'values']
         # manipulated no matter the form that they returned in
 
         # start by resetting the index so that these can be more easily
