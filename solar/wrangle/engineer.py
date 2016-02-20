@@ -195,12 +195,7 @@ class Engineer(object):
             train_dates=train_dates, lat_longs=lat_longs, **feature['axes'])
         test_index = Engineer.create_index(
             test_dates=test_dates, lat_longs=lat_longs, **feature['axes'])
-        """
-        trainX = pd.merge(train_index, pd.DataFrame(trainX),
-                          left_index=True, right_index=True)
-                          """
-        testX = pd.merge(test_index, pd.DataFrame(testX),
-                         left_index=True, right_index=True)
+
         train_index = train_index.sort_values(by=['train_dates', 'models',
                                                   'times', 'station',
                                                   'lat_longs'])
@@ -209,6 +204,13 @@ class Engineer(object):
         trainX.columns = ['models', 'train_dates', 'times', 'station',
                           'var', 'lat_longs', 'values']
         # manipulated no matter the form that they returned in
+        test_index = test_index.sort_values(by=['test_dates', 'models',
+                                                'times', 'station',
+                                                'lat_longs'])
+        testX = pd.DataFrame(np.hstack((test_index.values,
+                                        testX[:, np.newaxis])))
+        testX.columns = ['models', 'test_dates', 'times', 'station',
+                         'var', 'lat_longs', 'values']
 
         # start by resetting the index so that these can be more easily
         trainX = trainX.reset_index()
