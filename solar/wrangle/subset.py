@@ -98,14 +98,12 @@ class Subset(object):
 
         train_sub_str = '_latlon_subset_19940101_20071231.nc'
         test_sub_str = '_latlon_subset_20080101_20121130.nc'
-
         trainX = Subset.file_loop(trainX_dir, var, train_sub_str,
                                   train_dates, models, lats, longs, times,
                                   elevs)
         testX = Subset.file_loop(testX_dir, var, test_sub_str,
                                  test_dates, models, lats, longs, times,
                                  elevs)
-
         return trainX, testX
 
     @staticmethod
@@ -117,6 +115,7 @@ class Subset(object):
         # First loop over the files for the specificed variables in the set
         # Save each variables in a list. Each element is an ndarray
         loaded = []
+
         for i, f in enumerate(var):
             loaded.append(Subset.cutX(
                 input_dir + '/' + var[i] + substr, dates, models, lats,

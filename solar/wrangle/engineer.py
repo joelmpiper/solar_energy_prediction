@@ -209,7 +209,7 @@ class Engineer(object):
                                                 'lat_longs'])
         testX = pd.DataFrame(np.hstack((test_index.values,
                                         testX[:, np.newaxis])))
-        testX.columns = ['models', 'test_dates', 'times', 'station',
+        testX.columns = ['test_dates', 'models', 'times', 'station',
                          'var', 'lat_longs', 'values']
 
         # start by resetting the index so that these can be more easily

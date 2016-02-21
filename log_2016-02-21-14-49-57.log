@@ -1,0 +1,6 @@
+2016-02-21 14:49:57,840 - solar.wrangle.wrangle - Started building test and training data
+2016-02-21 14:49:57,840 - solar.wrangle.wrangle - Features: [{'type': 'frac_dist'}, {'type': 'days_from_coldest'}, {'type': 'days_from_solstice'}, {'axes': {'var': ['all'], 'models': [0, 7], 'station': ['all'], 'times': ['all']}, 'type': 'relative'}, {'type': 'station_names'}]
+2016-02-21 14:49:57,840 - solar.wrangle.wrangle - Train dates: ['2000-01-01', '2000-06-30']
+2016-02-21 14:49:57,840 - solar.wrangle.wrangle - Test dates: ['2008-01-01', '2008-01-05']
+2016-02-21 14:49:57,840 - solar.wrangle.wrangle - Stations: ['all']
+2016-02-21 14:57:32,562 - solar.wrangle.wrangle - Finished building test and training data
