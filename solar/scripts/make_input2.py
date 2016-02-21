@@ -12,8 +12,8 @@ station_file = 'solar/data/kaggle_solar/station_info.csv'
 
 station = ['all']
 
-train_dates = ['2000-01-01', '2000-06-30']
-test_dates = ['2008-01-01', '2008-01-05']
+train_dates = ['1994-01-01', '2007-12-31']
+test_dates = ['2008-01-01', '2012-11-30']
 
 station_layout = True
 
