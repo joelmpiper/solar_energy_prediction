@@ -92,7 +92,7 @@ cv_splits = 10
 jobs = 10
 write = 's3'
 
-model = Model.model_from_pickle('input_2016-02-06-15-38-35.p', Ridge,
+model = Model.model_from_pickle('input_2016-02-21-20-46-17.p', Ridge,
                                 {'alpha': np.logspace(-3, 1, 10, base=10)},
                                 cv_splits, error_formula, jobs, write,
                                 normalize=True, random_state=1)
