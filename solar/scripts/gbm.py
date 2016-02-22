@@ -89,7 +89,7 @@ from sklearn import metrics
 error_formula = 'mean_absolute_error'
 
 cv_splits = 3
-jobs = 10
+jobs = 20
 write = 's3'
 
 model = Model.model_from_pickle(
