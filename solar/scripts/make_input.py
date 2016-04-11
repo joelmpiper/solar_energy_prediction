@@ -76,7 +76,7 @@ reload(solar.wrangle.subset)
 reload(solar.wrangle.engineer)
 from solar.wrangle.wrangle import SolarData
 
-external = 's3'
+external = 'local'
 
 input_data = SolarData.load(Xtrain_dir, ytrain_file, Xtest_dir, station_file,
                             train_dates, test_dates, station,

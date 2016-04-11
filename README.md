@@ -3,5 +3,13 @@
 
 <img src="images/gefs_mesonet_stations.png" width="1024">
 
-In the process of switching the analysis infrastructure from beat-the-benchmark to my code. The script in *bin/solar_admin.py* should run with a simple (non-distance-weighted) grid around each station point. This has still not been adequately tested.
+## This directory includes the code developed in support of the course project for the General Assembly Data Science Course.
 
+### Content of the subdirectories
+
+* bin
+* log
+* notebooks
+* slides
+* solar
+* test 
