@@ -8,10 +8,15 @@
 ## Getting Started
 
 1. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, your directory structure should look like:
+
 	solar/data/kaggle_solar/:
+
 			train.csv
+
 			station_info.csv
+
 			sample_submission.csv	
+
 
 2. 
 ### Content of the subdirectories
