@@ -7,7 +7,9 @@
 
 ## Getting Started
 
-1. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, your directory structure should look like:
+1. Clone me
+
+2. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, your directory structure should contain the following new files:
 
 	solar/data/kaggle_solar/:
 
@@ -15,10 +17,42 @@
 
 			station_info.csv
 
-			sample_submission.csv	
+			sampleSubmission.csv	
 
+			test/
 
-2. 
+				apcp_sfc_latlon_subset_20080101_20121130.nc
+
+				dlwrf_sfc_latlon_subset_20080101_20121130.nc
+
+				dswrf_sfc_latlon_subset_20080101_20121130.nc
+
+				pres_msl_latlon_subset_20080101_20121130.nc
+
+				pwat_eatm_latlon_subset_20080101_20121130.nc
+
+				spfh_2m_latlon_subset_20080101_20121130.nc
+
+				tcdc_eatm_latlon_subset_20080101_20121130.nc
+
+				tcolc_eatm_latlon_subset_20080101_20121130.nc
+
+				tmax_2m_latlon_subset_20080101_20121130.nc
+
+				tmin_2m_latlon_subset_20080101_20121130.nc
+
+				tmp_2m_latlon_subset_20080101_20121130.nc
+
+				tmp_sfc_latlon_subset_20080101_20121130.nc
+
+				ulwrf_sfc_latlon_subset_20080101_20121130.nc
+
+				ulwrf_tatm_latlon_subset_20080101_20121130.nc
+
+				uswrf_sfc_latlon_subset_20080101_20121130.nc	
+
+			
+3. 
 ### Content of the subdirectories
 
 * bin
