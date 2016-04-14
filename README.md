@@ -9,7 +9,7 @@
 
 1. Clone me
 
-2. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, your directory structure should contain the following new files:
+2. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, extract the zipped directories and store the new files in directories called test and train. Your directory structure should then contain the following new files:
 
 	solar/data/kaggle_solar/:
 
