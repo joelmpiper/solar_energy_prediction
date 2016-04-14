@@ -7,7 +7,9 @@
 
 ## Getting Started
 
-1. Clone me
+1. If git is not installed in Linux environment (for instance if running on AWS EC2 instance), then run: sudo yum install git
+
+2. Clone me
 
 2. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, extract the zipped directories and store the new files in directories called test and train. Your directory structure should then contain the following new files:
 
@@ -85,7 +87,7 @@
 
 				uswrf_sfc_latlon_subset_19940101_20071231.nc
 
-This will be in addition to the directory structure already in place to track intermediate products created by the script, which includes the following directories:
+	This will be in addition to the directory structure already in place to track intermediate products created by the script, which includes the following directories:
 		
 			inputs/
 
@@ -93,7 +95,7 @@ This will be in addition to the directory structure already in place to track in
 
 			submissions/
 			
-3. 
+3.  
 
 ### Content of the subdirectories
 
