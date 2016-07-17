@@ -7,6 +7,7 @@
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
+# import pdb
 
 TEST = 0
 
@@ -137,17 +138,19 @@ class Subset(object):
 
         # set defaults
         begin_date = 0
-        end_date = len(X[1][:])
+        end_date = len(list(X)[1][:])
         # if date values are provided revise the ranges
         if (input_date):
-            dates = X[1][:]
+            dates = list(X)[1][:]
             begin_date, end_date = Subset.check_dates(dates, input_date)
+            # For some reason in python 3, these were coming back as
+            # 1-element lists
+            begin_date = begin_date[0]
+            end_date = end_date[0]
 
-        X = np.array(X[-1])[begin_date:(end_date+1),
-                            models[:, np.newaxis, np.newaxis, np.newaxis],
-                            times[:, np.newaxis, np.newaxis],
-                            lats,
-                            longs]
+        X = np.array(list(X)[-1])[begin_date:(end_date+1),
+                                  models[:, np.newaxis, np.newaxis, np.newaxis],
+                                  times[:, np.newaxis, np.newaxis], lats, longs]
         if (TEST > 0):
             print("Subset complete")
 
@@ -176,4 +179,4 @@ if __name__ == '__main__':
                trainy_file='solar/data/kaggle_solar/train.csv',
                testX_file='solar/data/kaggle_solar/test/',
                loc_file='solar/data/kaggle_solar/station_info.csv')
-    print s.trainX.shape
+    print(s.trainX.shape)

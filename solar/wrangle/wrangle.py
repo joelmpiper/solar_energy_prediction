@@ -16,12 +16,13 @@ by Alec Radford.
 import os
 import netCDF4 as nc
 import numpy as np
-import cPickle as pickle
+import pickle
 import pandas as pd
 import logging
 import datetime
 from solar.wrangle.subset import Subset
 from solar.wrangle.engineer import Engineer
+# import pdb
 
 
 class SolarData(object):
@@ -93,10 +94,10 @@ class SolarData(object):
         train_sub_str = '_latlon_subset_19940101_20071231.nc'
         test_sub_str = '_latlon_subset_20080101_20121130.nc'
 
-        print 'Loading training data...'
+        print('Loading training data...')
         trainX = load_GEFS_data(gefs_train, files_to_use, train_sub_str)
         times, trainY = load_csv_data(os.path.join(meso_dir, 'train.csv'))
-        print 'Training data shape', trainX.shape, trainY.shape
+        print('Training data shape', trainX.shape, trainY.shape)
 
         testX = load_GEFS_data(gefs_test, files_to_use, test_sub_str)
         pickle.dump((trainX, trainY, times, testX),
@@ -216,6 +217,8 @@ class SolarData(object):
             # leave the row indices depending on what the data should look like
             # for the training model; either one row per date, or one row per
             # date and station
+            # pdb.set_trace()
+
             if (i == 0):
                 trainX = temp_train
                 testX = temp_test
@@ -287,4 +290,4 @@ if __name__ == '__main__':
     solar_array = SolarData(pickle=False, benchmark=False, var=var,
                             models=models, lats=lats, longs=longs,
                             train_dates=train_dates, test_dates=test_dates)
-    print solar_array.data
+    print(solar_array.data)

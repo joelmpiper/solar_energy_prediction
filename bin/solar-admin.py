@@ -55,8 +55,8 @@ def main(*argv):
     preds = Submission.make_submission_file(model, input_data[1],
                                             input_data[2], True, 'local')
 
-    print model.best_score_
-    print preds
+    print(model.best_score_)
+    print(preds)
 
 if __name__ == '__main__':
     main(*sys.argv)

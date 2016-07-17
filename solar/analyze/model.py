@@ -8,9 +8,10 @@ by Alec Radford.
 """
 
 import numpy as np
-import cPickle as pickle
+import pickle
 import datetime
 import logging
+# import pdb
 from sklearn import metrics
 from solar.wrangle.wrangle import SolarData
 from sklearn.linear_model import Ridge
@@ -102,6 +103,9 @@ class Model(object):
         grid = GridSearchCV(model, param_dict, cv=cv_splits,
                             scoring=err_formula, n_jobs=n_jobs)
 
+        print(trainX)
+        print(np.ravel(trainy))
+        # pdb.set_trace()
         grid.fit(trainX, np.ravel(trainy))
 
         logger.info('Best score: %s' % (grid.best_score_))
@@ -117,7 +121,7 @@ class Model(object):
                         open("/home/ec2-user/mount_point/data/kaggle_solar/" +
                              "models/model_" + file_time + ".p", "wb"))
         else:
-            print "None"
+            print("None")
 
         return grid
 
@@ -137,7 +141,7 @@ class Model(object):
             model.fit(X_train, y_train)
             preds = model.predict(X_cv)
             mae = metrics.mean_absolute_error(y_cv, preds)
-            print "MAE (fold %d/%d): %f" % (i + 1, N, mae)
+            print("MAE (fold %d/%d): %f" % (i + 1, N, mae))
             MAEs += mae
         return MAEs/N
 
@@ -162,7 +166,7 @@ class Model(object):
         model = self.model(normalize=True)
         # Normalizing is usually a good idea
 
-        print 'Finding best regularization value for alpha...'
+        print('Finding best regularization value for alpha...')
         alphas = np.logspace(-3, 1, 8, base=10)
         # List of alphas to check
         alphas = np.array((0.3, 0.2))
@@ -171,12 +175,12 @@ class Model(object):
             model.alpha = alpha
             mae = Model.cv_loop(trainX, trainY, model, 10)
             maes.append(mae)
-            print 'alpha %.4f mae %.4f' % (alpha, mae)
+            print('alpha %.4f mae %.4f' % (alpha, mae))
         best_alpha = alphas[np.argmin(maes)]
-        print ('Best alpha of %s with mean average error of %s'
-               % (best_alpha, np.min(maes)))
+        print('Best alpha of %s with mean average error of %s'
+              % (best_alpha, np.min(maes)))
 
-        print 'Fitting model with best alpha...'
+        print('Fitting model with best alpha...')
         model.alpha = best_alpha
         model.fit(trainX, trainY)
 
@@ -192,4 +196,4 @@ class Model(object):
 
 if __name__ == '__main__':
     model = Model()
-    print Model
+    print(Model)

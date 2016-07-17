@@ -9,6 +9,8 @@ import pandas as pd
 import itertools
 import datetime
 
+# import pdb
+
 from solar.wrangle.subset import Subset
 
 TEST = 0
@@ -175,13 +177,13 @@ class Engineer(object):
         etc., for a grid of points surrounding the station list.
         """
 
-        trainX, testX = Engineer.create_grid(trainX_dir, testX_dir, locy,
-                                             train_dates, test_dates,
-                                             stations, feature)
+        ttrainX, ttestX = Engineer.create_grid(trainX_dir, testX_dir, locy,
+                                               train_dates, test_dates,
+                                               stations, feature)
 
         # Reshape into one column for exploration
-        trainX = trainX.reshape(np.product(trainX.shape[:]))
-        testX = testX.reshape(np.product(testX.shape[:]))
+        ttrainX = ttrainX.reshape(np.product(ttrainX.shape[:]))
+        ttestX = ttestX.reshape(np.product(ttestX.shape[:]))
 
         X_par = Engineer.parse_parameters(**feature['axes'])
         X_par['train_dates'] = train_dates
@@ -199,19 +201,33 @@ class Engineer(object):
         train_index = train_index.sort_values(by=['train_dates', 'models',
                                                   'times', 'station',
                                                   'lat_longs'])
-        trainX = pd.DataFrame(np.hstack((train_index.values,
-                                         trainX[:, np.newaxis])))
-        trainX.columns = ['models', 'train_dates', 'times', 'station',
-                          'var', 'lat_longs', 'values']
+        trainX = pd.DataFrame(train_index)
+        trainX['values'] = ttrainX
+        # trainX = pd.DataFrame(np.hstack((train_index.values,
+        #                                 trainX[:, np.newaxis])))
+        # trainX.columns = ['var', 'lat_longs', 'train_dates', 'models',
+        #                  'station', 'times', 'values']
+        # trainX.columns = ['models', 'times', 'var', 'lat_longs', 'station',
+        #                  'train_dates', 'values']
+
         # manipulated no matter the form that they returned in
         test_index = test_index.sort_values(by=['test_dates', 'models',
                                                 'times', 'station',
                                                 'lat_longs'])
-        testX = pd.DataFrame(np.hstack((test_index.values,
-                                        testX[:, np.newaxis])))
-        testX.columns = ['test_dates', 'models', 'times', 'station',
-                         'var', 'lat_longs', 'values']
+        testX = pd.DataFrame(test_index)
+        testX['values'] = ttestX
+        # testX.columns = ['var', 'lat_longs', 'train_dates', 'models',
+        #                 'station', 'times', 'values']
+        # testX = pd.DataFrame(np.hstack((test_index.values,
+        #                                testX[:, np.newaxis])))
 
+        # testX.columns = ['test_dates', 'models', 'times', 'station',
+        #                 'var', 'lat_longs', 'values']
+
+        # testX.columns = ['station', 'test_dates', 'lat_longs', 'times',
+        #                 'models', 'var', 'values']
+
+        # pdb.set_trace()
         # start by resetting the index so that these can be more easily
         trainX.reset_index(inplace=True)
         testX.reset_index(inplace=True)
@@ -245,9 +261,10 @@ class Engineer(object):
         testX = testX.unstack(list(
             set(test_cols).difference(test_diff_cols)))
 
-        trainX.sort_index(inplace=True)
-        testX.sort_index(inplace=True)
+        trainX = trainX.swaplevel('station', 1, axis=0).sort_index()
+        testX = testX.swaplevel('station', 1, axis=0).sort_index()
 
+        # pdb.set_trace()
         return trainX, testX
 
     @staticmethod
@@ -475,6 +492,8 @@ class Engineer(object):
         if (station_layout):
             train_diff_cols = {'train_dates', 'station'}
             test_diff_cols = {'test_dates', 'station'}
+            # train_diff_cols = {'station', 'train_dates'}
+            # test_diff_cols = {'station', 'test_dates'}
         else:
             train_diff_cols = {'train_dates'}
             test_diff_cols = {'test_dates'}
@@ -485,8 +504,8 @@ class Engineer(object):
         testX = testX.unstack(list(
             set(test_cols).difference(test_diff_cols)))
 
-        trainX = trainX.swaplevel(0, 1, axis=0).sort_index()
-        testX = testX.swaplevel(0, 1, axis=0).sort_index()
+        trainX = trainX.swaplevel('station', 1, axis=0).sort_index()
+        testX = testX.swaplevel('station', 1, axis=0).sort_index()
         return trainX, testX
 
     @staticmethod
@@ -536,7 +555,7 @@ class Engineer(object):
 
         # iterate over all passed items
         indexed_args = {}
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             value = np.array(val)
             if (key == 'times'):
                 value = (value - 12)//3
@@ -561,7 +580,7 @@ class Engineer(object):
         return_args = {}
 
         # iterate over all of the passed items
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             if ('all' in value):
                 return_args[key] = Engineer.fill_default_val(key)
             else:
@@ -588,6 +607,7 @@ class Engineer(object):
         """ Create an index based on the input X parameters and the
         engineered features.
         """
+        # pdb.set_trace()
         param_dict = Engineer.fill_default(**kwargs)
         col_names = param_dict.keys()
         new_indices = pd.DataFrame(list(

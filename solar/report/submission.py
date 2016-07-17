@@ -8,7 +8,7 @@ by Alec Radford.
 """
 
 import logging
-import cPickle as pickle
+import pickle
 import os
 import csv
 import datetime
@@ -76,11 +76,10 @@ class Submission(object):
         logger.addHandler(fh)
 
         logger.info('Started building submission file')
-
         preds = model.predict(testX)
         if (station_format):
-            print testX
-            print trainy
+            print(testX)
+            print(trainy)
             num_rows = len(testX.index.levels[0])
             trainy = trainy.unstack('location')
             preds = preds.reshape(num_rows, trainy.shape[1])
@@ -136,11 +135,11 @@ class Submission(object):
             model = Model().model
             __, __, __, testX = SolarData().data
 
-        print 'Predicting...'
+        print('Predicting...')
 
         preds = model.predict(testX)
 
-        print 'Saving to csv...'
+        print('Saving to csv...')
         save_submission(preds, 'solar/data/kaggle_solar/')
 
         self.preds = preds
@@ -157,4 +156,4 @@ if __name__ == '__main__':
     preds = Submission(input_pickle=False)
 #    trainX, trainY, times = (data.load('solar/data/kaggle_solar/train/',
 #                            'solar/data/kaggle_solar/', 'all'))
-    print preds
+    print(preds)

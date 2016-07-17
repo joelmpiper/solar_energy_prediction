@@ -9,9 +9,9 @@
 
 1. If git is not installed in Linux environment (for instance if running on AWS EC2 instance), then run: sudo yum install git
 
-2. Clone me
+2. Clone me: git clone https://github.com/joelmpiper/solar_energy_prediction.git
 
-2. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, extract the zipped directories and store the new files in directories called test and train. Your directory structure should then contain the following new files:
+3. Download all of the data from: https://www.kaggle.com/c/ams-2014-solar-energy-prediction-contest/data and store in the directory kaggle_solar/data/. You will need a Kaggle user name and password to download the data. After downloading all of the data files, extract the zipped directories and store the new files in directories called test and train. Your directory structure should then contain the following new files:
 
 	solar/data/kaggle_solar/:
 

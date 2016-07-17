@@ -25,25 +25,25 @@ import numpy as np
 
 # Choose up to 98 stations; not specifying a station means to use all that fall within the given lats and longs. If the
 # parameter 'all' is given, then it will use all stations no matter the provided lats and longs
-station = ['all']
+station = ['ACME', 'BEAV', 'ADAX']
 
 # Determine which dates will be used to train the model. No specified date means use the entire set from 1994-01-01
 # until 2007-12-31.
-train_dates = ['1994-01-01', '2007-12-31']
+train_dates = ['1994-01-01', '1994-01-07']
 
 #2008-01-01 until 2012-11-30
-test_dates = ['2008-01-01', '2012-11-30']
+test_dates = ['2008-01-01', '2008-01-08']
 
 station_layout = True
 
 # Use all variables
-var = ['all']
+var = ['uswrf_sfc', 'dswrf_sfc']
 
 # Keep model 0 (the default model) as a column for each of the variables (aggregated over other dimensions)
-model = [0, 1]
+model = [0]
 
 # Aggregate over all times
-times = ['all']
+times = [12, 15, 18, 21, 24]
 
 default_grid = {'type':'relative', 'axes':{'var':var, 'models':model, 'times':times,
                                           'station':station}}
